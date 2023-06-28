@@ -1,19 +1,21 @@
 "SQLParserTools provides classes for parsing and building SQL strings"
 
 # Check Bools are defined
-try:
-    True
-except NameError:
-    True = 1
-    False = 0
+# try:
+#     True
+# except NameError:
+#     True = 1
+#     False = 0
 
 # Imports
 from error import *
 from external.StringParsers import *
+import functools
 import string
 
+
 # Definitions
-allowedCharacters = string.letters+'_-0123456789'
+allowedCharacters = string.ascii_letters + '_-0123456789'
 sqlReservedWords = [
     'AND',
     'AS',
@@ -72,7 +74,7 @@ soonToBe = [
 # Ensure list items are all uppercase if set extrenally
 def setTypes(list):
     for i in range(len(list)):
-        list[i] = str(list[i]).upper()
+        list[i] = list[i].upper()
     types = list
 
 # SQLParser
@@ -89,7 +91,7 @@ class Parser:
     def parse(self, sql):
         "Parse an SQL statement"
         stripped = stripBoth(sql.split(' '))
-        function = str(stripped[0]).lower()
+        function = stripped[0].lower()
         if function == 'select':
             result = self.parseSelect(sql)
         elif function == 'delete':
@@ -103,7 +105,7 @@ class Parser:
         elif function == 'drop':
             result = self.parseDrop(sql)
         elif function == 'show':
-            if str(stripped[1]).lower() == 'tables':
+            if stripped[1].lower() == 'tables':
                 result = {'item':'tables',}
             else:
                 raise SQLSyntaxError("Expected 'TABLES' after SHOW.")
@@ -117,12 +119,12 @@ class Parser:
         keyword = 'DROP'
         tableIdentifier = 'TABLE'
         table = ''
-        sql = str(stripBoth(sql))
-        if sql[:len(keyword)+1].lower() <> str(keyword).lower()+' ':
+        sql = stripBoth(sql)
+        if sql[:len(keyword)+1].lower() != keyword.lower()+' ':
             raise SQLSyntaxError('%s term not found at start of the %s statement.'%(keyword.upper(), keyword.upper()))
         else:
             sql = stripStart(sql[len(keyword)+1:])
-        if sql[:len(tableIdentifier)+1].lower() <> str(tableIdentifier).lower()+' ':
+        if sql[:len(tableIdentifier)+1].lower() != tableIdentifier.lower()+' ':
             raise SQLSyntaxError('%s term not found after %s keyword.'%(tableIdentifier.upper(), keyword.upper()))
         else:
             sql = stripStart(sql[len(tableIdentifier)+1:])
@@ -145,9 +147,9 @@ class Parser:
     def parseCreate(self, sql, types=types):
         "Parse a CREATE statement"
         sql, table = self._parseTable(sql, 'CREATE', 'TABLE')
-        if sql[0] <> "(":
+        if sql[0] != "(":
             raise SQLSyntaxError("Expected a '(' after the table name.")
-        if sql[-1:] <>  ")":
+        if sql[-1:] !=  ")":
             raise SQLSyntaxError("Expected a ')' at the end of the CREATE statement.")
         sql = sql[1:]
         if (len(sql.split("'"))-1)%2:
@@ -424,11 +426,11 @@ class Parser:
         
         Returns a tuple (remaining sql, table name)."""
         sql = stripBoth(sql)
-        if sql[:len(keyword)+1].lower() <> keyword.lower()+' ':
+        if sql[:len(keyword)+1].lower() != keyword.lower()+' ':
             raise SQLSyntaxError('%s term not found at start of the %s statement.'%(keyword.upper(), keyword.upper()))
         else:
             sql = stripStart(sql[len(keyword)+1:])
-        if sql[:len(tableIdentifier)+1].lower() <> tableIdentifier.lower()+' ':
+        if sql[:len(tableIdentifier)+1].lower() != tableIdentifier.lower()+' ':
             raise SQLSyntaxError('%s term not found after %s keyword.'%(tableIdentifier.upper(), keyword.upper()))
         else:
             sql = stripStart(sql[len(tableIdentifier)+1:])
@@ -448,7 +450,7 @@ class Parser:
     def parseInsert(self, sql):
         "Parse an INSERT clause"
         sql, table = self._parseTable(sql, 'INSERT', 'INTO')
-        if sql[0] <> "(":
+        if sql[0] != "(":
             raise SQLSyntaxError("Expected a '(' after the table name.")
         else:
             sql=stripStart(sql[1:])
@@ -471,12 +473,12 @@ class Parser:
             for column in columns:
                 if columns.count(column) > 1:
                     raise SQLError("The column named '%s' has been specified more than once in the INSERT statement."%(column))
-            if sql[:6].lower() <> 'values':
+            if sql[:6].lower() != 'values':
                 raise SQLSyntaxError("Expected 'VALUES' after column names in INSERT statement.")
             sql = stripStart(sql[6:])
-            if sql[0] <> '(':
+            if sql[0] != '(':
                 raise SQLSyntaxError("Expected '(' after VALUES in INSERT statement.")
-            if sql[-1:] <> ')':
+            if sql[-1:] != ')':
                 raise SQLSyntaxError("Expected ')' after column values in INSERT statement.")
             sql = sql[1:-1]
             i=0
@@ -541,7 +543,7 @@ class Parser:
                         break
                 else:
                     i+=1
-            if len(columns) <> len(values):
+            if len(columns) != len(values):
                 raise SQLError("The number of columns doesn't match the number of values.")
             return {
                 'table':table,
@@ -558,7 +560,7 @@ class Parser:
         order = []
         where = []
         keyword = 'SELECT'
-        if sql[:len(keyword)+1].lower() <> keyword.lower()+' ':
+        if sql[:len(keyword)+1].lower() != keyword.lower()+' ':
             raise SQLSyntaxError('%s term not found at start of the %s statement.'%(keyword.upper(), keyword.upper()))
         else:
             sql = stripStart(sql[len(keyword)+1:])
@@ -569,7 +571,7 @@ class Parser:
             columns = stripBoth(sql[:pos].split(','))
             if columns[-1] == '':
                 raise SQLSyntaxError("Unexpected ',' found after column names and before FROM keyword.")
-            if columns <> ['*']:
+            if columns != ['*']:
                 for column in columns:
                     for char in column:
                         if char not in allowedCharacters+'.':
@@ -616,18 +618,18 @@ class Parser:
                         where = stripBoth(sql[6:len(orderbyParts[0])])
                         order = sql[len(orderbyParts[0])+8:]
                     
-                        if order[0] <> ' ':
+                        if order[0] != ' ':
                             raise SQLSyntaxError('Expected whitespace after ORDER BY keyword')
                 else:
                     order = orderbyParts[-1]
-                    if order[0] <> ' ':
+                    if order[0] != ' ':
                         raise SQLSyntaxError('Expected whitespace after ORDER BY keyword')
                     where = stripBoth(sql[6:len('order by'.join(orderbyParts[:-1]))])
             elif sql[:8].lower() == 'order by':
-                if sql[8:].lower().find('where') <> -1:
+                if sql[8:].lower().find('where') != -1:
                     raise SQLSyntaxError('WHERE should come before ORDER BY in SELECT statement.')
                 order = sql[8:]
-                if order[0] <> ' ':
+                if order[0] != ' ':
                     raise SQLSyntaxError('Expected whitespace after ORDER BY keyword')
                         
             else:
@@ -683,7 +685,9 @@ class Parser:
                 raise SQLSyntaxError("Order clause not properly formed near '%s'."%(repr(part)))
         return orderPairs
 
-    def _parseWhere(self, where, compOperators=['>','<','=','>=','<=','<>','!=','like'], logicalOperators=['and', 'or'], tables=[]):
+    def _parseWhere(self, where, 
+                    compOperators=['>','<','=','>=','<=','<>','!=','like'],
+                    logicalOperators=['and', 'or'], tables=[]):
         """Parse WHERE clause string into a list of parts
         
         Returns a list of 'not', '(', ')', logicalOperator or [columnName, comparisonOperator, value] objects.
@@ -692,15 +696,16 @@ class Parser:
         """
         #if where[:5].upper() != 'WHERE':
         #    raise SQLSyntaxError("Expected 'WHERE' at begining of WHERE clause")
-        #if where[5] <> ' ':
+        #if where[5] != ' ':
         #    raise SQLSyntaxError("Expected whitespace after WHERE keyword")
         #where = where[5:]
-        def longest(a,b):
+        def longest(a, b):
             if len(a) > len(b):
                 return -1
             else:
                 return 0
-        compOperators.sort(longest)
+        compOperators.sort(key=functools.cmp_to_key(longest))
+        
         where = self._parseWhereString(where, compOperators, logicalOperators, tables)
         n=[]
         i = 0
@@ -877,7 +882,7 @@ class Parser:
                     for operator in logicalOperators:
                         if len(operator)>max:
                             max = len(operator)
-                    r = range(1,max)
+                    r = [i for i in range(1,max)]
                     r.reverse()
                     for length in r:
                         if length < len(where[pos:]):
@@ -916,7 +921,7 @@ class Parser:
         where = []
         columns = []
         keyword = 'UPDATE'
-        if sql[:len(keyword)+1].lower() <> keyword.lower()+' ':
+        if sql[:len(keyword)+1].lower() != keyword.lower()+' ':
             raise SQLSyntaxError('%s term not found at start of the %s statement.'%(keyword.upper(), keyword.upper()))
         else:
             sql = stripStart(sql[len(keyword)+1:])
@@ -1184,9 +1189,9 @@ class Builder:
             for name in ['name', 'type']:
                 if type(column['name']) != type(''):
                     raise DataError('Column %ss should be strings. %s is not a valid value.'%(name, repr(column['name'])))
-            if column['primaryKey'] and column['default'] <> None:
+            if column['primaryKey'] and column['default'] != None:
                 raise SQLError('A column cannot be a PRIMARY KEY and have a default value')
-            if column['foreignKey'] and column['default'] <> None:
+            if column['foreignKey'] and column['default'] != None:
                 raise SQLError('A column cannot be a FOREIGN KEY and have a default value')
             if column['primaryKey'] and column['foreignKey']:
                 raise SQLError('A column cannot be a PRIMARY KEY and a FOREIGN KEY')

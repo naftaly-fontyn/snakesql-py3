@@ -8,14 +8,16 @@ Python 2.1 doesn't support the mode parameter.
 """
 
 # Imports
-import sys, dumbdbm, lock, os
+import sys, lock, os
+import dbm.dumb as dumbdbm
+import builtins
 
 # Set up True and False
-try:
-    True
-except NameError:
-    True = (1==1)
-    False = (1==0)
+# try:
+#     True
+# except NameError:
+#     True = (1==1)
+#     False = (1==0)
     
 # Python 2.1 os.extsep
 try:
@@ -60,7 +62,7 @@ class Database(dumbdbm._Database):
             self.locks.rollback(file)
             
     def close(self,commit=False):
-        res = dumbdbm._Database.close(self)
+        _ = dumbdbm._Database.close(self)
         if commit:
             self.commit()
         else:
@@ -76,7 +78,7 @@ class Database(dumbdbm._Database):
 def open(file, flag=None, mode=None, warn=False):
     if not os.path.exists(file+'.dir') or not os.path.exists(file+'.dat') or not os.path.exists(file+'.bak'):
         if sys.version_info < (2,2):
-            if mode <> None:
+            if mode != None:
                 raise Exception("'mode' parameter not supported in Python < 2.2")
             fp = dumbdbm._Database(file)
             fp.close()
@@ -84,11 +86,12 @@ def open(file, flag=None, mode=None, warn=False):
             fp.close()
         else:
             if mode == None:
-                mode = 0666
+                mode = 0o666
             fp = dumbdbm._Database(file, mode)
             fp.close()
-            fp = dumbdbm._open(file+'.bak','w')
+            # fp = dumbdbm._open(file+'.bak','w')
+            fp = builtins.open(file+'.bak','w')
             fp.close()
     if mode == None:
-        mode = 0666
+        mode = 0o666
     return Database(file, mode, warn)

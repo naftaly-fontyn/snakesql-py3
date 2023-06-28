@@ -64,11 +64,11 @@ __version__ = (0,5,2,'alpha')
 __name__ = 'SnakeSQL'
 
 # Check Bools are defined
-try:
-    True
-except NameError:
-    True = 1
-    False = 0
+# try:
+#     True
+# except NameError:
+#     True = 1
+#     False = 0
     
 # Imports
 import sys, os.path
@@ -122,16 +122,16 @@ apilevel = '2.0'
 threadsafety = 0 # Unsure of this so "Threads may not share the module." seems safest.
 paramstyle='qmark' # Question mark style, e.g. '...WHERE name=?'
 _type_codes = { # For converting names to codes for the .description attribute
-    'BOOL':1,
-    'INTEGER':2,
-    'LONG':3,
-    'FLOAT':4,
-    'STRING':5,
-    'TEXT':6,
-    'BINARY':7, # XXX
-    'DATE':8,
-    'DATETIME':9,
-    'TIME':10,
+    'BOOL': 1,
+    'INTEGER': 2,
+    'LONG': 3,
+    'FLOAT': 4,
+    'STRING': 5,
+    'TEXT': 6,
+    'BINARY': 7, # XXX
+    'DATE': 8,
+    'DATETIME': 9,
+    'TIME': 10,
 }
 
 def Date(year,month,day):
@@ -183,7 +183,12 @@ def Binary(string): # XXX Really not sure about this one!
 class _Type:
     def __init__(self,*values):
         self.values = values
-    def __cmp__(self,other):
+        
+    def __eq__(self, other):
+        return other in self.values
+        
+    def __cmp__(self, other):
+        print('XXXX')
         if other in self.values:
             return 0
         if other < self.values:

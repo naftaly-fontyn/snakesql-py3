@@ -1,15 +1,16 @@
 
 
 # Set up True and False
-try:
-    True
-except NameError:
-    True = (1==1)
-    False = (1==0)
+# try:
+#     True
+# except NameError:
+#     True = (1==1)
+#     False = (1==0)
     
 
 import os.path, sys
-import base, dbm
+import driver.base as base
+import driver.dbm as dbm
 import lockcsv
 from error import *
 

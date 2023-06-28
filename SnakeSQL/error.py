@@ -1,9 +1,9 @@
 "DB-API 2.0 Exceptions"
 
 # Note: By convention, errors should not end with full stops and should be single sentances.
-import exceptions
+# import exceptions
 
-class Error(exceptions.StandardError):
+class Error(Exception):
     """Exception that is the base class of all other error
     exceptions. You can use this to catch all errors with one
     single 'except' statement. Warnings are not considered
@@ -12,7 +12,7 @@ class Error(exceptions.StandardError):
     module exceptions)."""
     pass
 
-class Warning(exceptions.StandardError):
+class Warning(Exception):
     """Exception raised for important warnings like data
     truncations while inserting, etc. It must be a subclass of
     the Python StandardError (defined in the module

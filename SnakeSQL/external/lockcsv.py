@@ -16,11 +16,11 @@ class InvalidRow(Exception):
 _open = open
 
 # Set up True and False
-try:
-    True
-except NameError:
-    True = (1==1)
-    False = (1==0)
+# try:
+#     True
+# except NameError:
+#     True = (1==1)
+#     False = (1==0)
 
 # Python 2.1 os.extsep
 try:
@@ -48,7 +48,7 @@ class CSV:
                 raise lock.LockError('Lock no longer valid.')
         else:
             try:
-                i = long(name)
+                i = int(name)  # long(name)
             except ValueError:
                 raise InvalidKey("Keys should be integers or longs. %s is not a valid key."%repr(name))
             if i<1:
@@ -65,14 +65,14 @@ class CSV:
                 raise lock.LockError('Lock no longer valid.')
         else:
             try:
-                i = long(name)
+                i = int(name)  # long(name)
             except ValueError:
                 raise InvalidKey("Keys should be integers or longs. %s is not a valid key."%repr(name))
             if i<1:
                 raise InvalidKey("Keys should be greater than one. %s is not a valid key."%repr(name))
             results = self._load()
             if not (len(results) == 1 and len(results[0]) == 0): # check row lengths
-                if len(results[0]) <> len(value):
+                if len(results[0]) != len(value):
                     raise InvalidRow("Each row in %s should have %s values, not %s."%(repr(self.locks.files.keys()[0]),len(results[0]),len(value)))
             if len(results) >= i:
                 results[i-1] = value
@@ -88,7 +88,7 @@ class CSV:
                 raise lock.LockError('Lock no longer valid.')
         else:
             try:
-                i = long(name)
+                i = int(name)  # long(name)
             except ValueError:
                 raise InvalidKey("Keys should be integers or longs. %s is not a valid key."%repr(name))
             if i<1:
@@ -108,7 +108,7 @@ class CSV:
             
     def _save(self, lines):
         fp = _open(self.filename,'wb')
-        fp.write(buildCSV(lines, self.separater, self.quote, self.linebreak, self.whitespace))
+        fp.write(buildCSV(lines, self.separater, self.quote, self.linebreak, self.whitespace).encode())
         fp.close()
             
     def keys(self):
@@ -156,10 +156,10 @@ if __name__ == '__main__':
     file['1'] = [1,'eight','nine']
     file['2'] = [2,'eight','nine']
     file['3'] = [3,'eight','']
-    print file['1']
-    print file['2']
-    print file['3']
+    print(file['1'])
+    print(file['2'])
+    print(file['3'])
     del file['2']
-    print file['1']
-    print file['2']
+    print(file['1'])
+    print(file['2'])
     file.commit()

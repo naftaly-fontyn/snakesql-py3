@@ -15,11 +15,11 @@ Really need to make proper use of these functions rather than eval() as implemen
 """
 
 # Set up True and False
-try:
-    True
-except NameError:
-    True = (1==1)
-    False = (1==0)
+# try:
+#     True
+# except NameError:
+#     True = (1==1)
+#     False = (1==0)
     
 from error import *
 from tablePrint import table
@@ -159,7 +159,7 @@ class BaseStringConverter(BaseConverter):
             return None
         elif len(str(column)) > self.max+2:
             raise ConversionError('Should be %s characters or less.'%self.max)
-        if str(column)[0] <> "'" or str(column)[-1:] <> "'":
+        if str(column)[0] != "'" or str(column)[-1:] != "'":
             raise ConversionError("%s column value %s should start and end with a ' character."%(self.type, column))
         return str(column)[1:-1].replace("''","'")
 
@@ -231,7 +231,7 @@ class BaseIntegerConverter(BaseConverter):
     def __init__(self):
         a = BaseConverter.__init__(self)
         self.type = 'Integer' # The column type should be specified in the definition
-        self.max  = int(2L**31L-1L)
+        self.max  = int(2 ** 31 - 1)
         self.min = -self.max-1
         self.SQLQuotes = False
         self.typeCode = 2
@@ -280,7 +280,7 @@ class BaseLongConverter(BaseConverter):
     def __init__(self):
         a = BaseConverter.__init__(self)
         self.type = 'Long' # The column type should be specified in the definition
-        self._conv = long
+        self._conv = int  # long
         self.SQLQuotes = False
         self.typeCode = 3
         return a
@@ -357,7 +357,7 @@ class BaseDateConverter(BaseConverter):
     def sqlToValue(self, column):
         if column == 'NULL':
             return None
-        if str(column)[0] <> "'" or str(column)[-1:] <> "'":
+        if str(column)[0] != "'" or str(column)[-1:] != "'":
             raise ConversionError("%s column value %s should start and end with a ' character."%(self.type, column))
         return self.storageToValue(str(column)[1:-1].replace("''","'"))
             
@@ -396,7 +396,7 @@ class BaseDatetimeConverter(BaseConverter):
     def sqlToValue(self, column):
         if column == 'NULL':
             return None
-        if str(column)[0] <> "'" or str(column)[-1:] <> "'":
+        if str(column)[0] != "'" or str(column)[-1:] != "'":
             raise ConversionError("%s column value %s should start and end with a ' character."%(self.type, column))
         return self.storageToValue(str(column)[1:-1].replace("''","'"))
 
@@ -432,7 +432,7 @@ class BaseTimeConverter(BaseConverter):
     def sqlToValue(self, column):
         if column == 'NULL':
             return None
-        if str(column)[0] <> "'" or str(column)[-1:] <> "'":
+        if str(column)[0] != "'" or str(column)[-1:] != "'":
             raise ConversionError("%s column value %s should start and end with a ' character."%(self.type, column))
         return self.storageToValue(str(column)[1:-1].replace("''","'"))
 
@@ -500,7 +500,8 @@ class BaseConnection:
             if self.tables[table].open:
                 self.tables[table].rollback()
         for table in self.createdTables:
-            if self.tables.has_key(table):
+            # if self.tables.has_key(table):
+            if table in self.tables:
                 if self.tables[table].open:
                     self.tables[table]._close()
                 del self.tables[table]
@@ -525,7 +526,8 @@ class BaseConnection:
         typeConverters = []
         sqlConverters = []
         for column in columns:
-            if not self.tables.has_key(table):
+            # if not self.tables.has_key(table):
+            if table not in self.tables:
                 raise SQLError("Table '%s' doesn't exist."%table)
             if not self.tables[table].columnExists(column):
                 raise SQLError("Table '%s' has no column named '%s'."%(table, column))
@@ -543,7 +545,8 @@ class BaseConnection:
         if not self.databaseExists(): # XXX Does this need to check files don't already exist?
             if not os.path.exists(self.database):
                 os.mkdir(self.database)
-            if self.tables.has_key(self.colTypesName):
+            # if self.tables.has_key(self.colTypesName):
+            if self.colTypesName in self.tables:
                 raise Error("ColTypes table already exists.")
             self.tables[self.colTypesName] = self.driver['Table'](self.colTypesName, filename=self.database+os.sep+self.colTypesName, columns=[])
             self.tables[self.colTypesName]._load()
@@ -565,7 +568,8 @@ class BaseConnection:
         "Get the values from the ColTypes table into a suitable structure."
         if self._closed:
             raise Error('The connection to the database has been closed.')
-        if not self.tables.has_key(self.colTypesName):
+        # if not self.tables.has_key(self.colTypesName):
+        if self.colTypesName not in self.tables:
             self.tables[self.colTypesName] = self.driver['Table'](self.colTypesName, filename=self.database+os.sep+self.colTypesName, columns=[])
             self.tables[self.colTypesName]._load()
         if not self.tables[self.colTypesName].open:
@@ -581,7 +585,8 @@ class BaseConnection:
             v = val[1]
             if v[2] not in self.driver['converters'].keys():
                 raise ConverterError("No converter registered for '%s' used in table '%s' column '%s'."%(v[2],v[0],v[1]))
-            if not tables.has_key(v[0]):
+            # if not tables.has_key(v[0]):
+            if v[0] not in tables:
                 tables[v[0]] = []
             tables[v[0]].append(
                 self.driver['Column'](
@@ -646,7 +651,8 @@ class BaseConnection:
         if self._closed:
             raise Error('The connection to the database has been closed.')
         cols = []          
-        if not self.tables.has_key(table):
+        # if not self.tables.has_key(table):
+        if table not in self.tables:
             raise InternalError("No such table '%s'."%(table))
         for column in columns:
             if not self.tables[table].columnExists(column):
@@ -700,7 +706,7 @@ class BaseConnection:
             typeConverters = []
             sqlConverters = []
             for block in where:
-                if not isinstance(block, basestring):
+                if type(block) != type(''):
                     if '.' not in block[0]:
                         if not table:
                             raise SQLError('No table specified for column %s in WHERE clause'%repr(block[0]))
@@ -715,7 +721,8 @@ class BaseConnection:
                         else:
                             tables.append(table)
                     sqlValues.append(block[2])
-                    if not self.tables.has_key(tables[-1]):
+                    # if not self.tables.has_key(tables[-1]):
+                    if tables[-1] not in self.tables:
                         raise SQLError("Table %s specified in WHERE clause doesn't exist"%(repr(tables[-1])))
                     if not self.tables[tables[-1]].has_key(columns[-1]):
                         raise SQLError("Table %s specified in WHERE clause doesn't have a column %s"%(repr(tables[-1]), repr(columns[-1])))
@@ -740,8 +747,8 @@ class BaseConnection:
                 else:
                     try:
                         internalValues.append(sqlConverters[i](value))
-                    except ConversionError, e:
-                        if isinstance(value, basestring) and value[0] <> "'":
+                    except ConversionError as e:
+                        if type(value) == type('') and value[0] != "'":
                             res1 = value.split('.')
                         if len(res1) == 1:
                             raise SQLError(str(e))
@@ -754,7 +761,7 @@ class BaseConnection:
                 i+=1
             c = 0
             for i in range(len(where)):
-                if not isinstance(where[i], basestring):
+                if type(where[i]) != type(''):
                     where[i][2] = internalValues[c]
                     c += 1
             return where, counter
@@ -790,12 +797,14 @@ class BaseConnection:
 
         if self._closed:
             raise Error('The connection to the database has been closed.')
-        if isinstance(tables, basestring):
+        if type(tables) == type(''):
             tables = [tables]
         for table in tables:
-            if not self.tables.has_key(table):
+            # if not self.tables.has_key(table):
+            if table not in self.tables:
                 raise InternalError("The table '%s' doesn't exist."%table)
-            if not self.tables.has_key(table):
+            # if not self.tables.has_key(table):
+            if table not in self.tables:  # TODO: look redundent
                 self.tables[table]._load()
         # 1. Convert name to number in the array
         if len(where):
@@ -808,7 +817,7 @@ class BaseConnection:
                 #~ for block in where:
                     #~ columns[table] = {}
             #~ for block in where:
-                #~ if not isinstance(block, basestring):
+                #~ if type(block) <> type(''):
                     #~ res = block[0].split('.')
                     #~ if len(res) == 1:
                         #~ t = tables[0]
@@ -854,7 +863,7 @@ found = []
     # ie we need to know the keyPosition of each tables row and the position of each field we want to select against
             for block in where:
                 # Prepare the values
-                if isinstance(block, basestring):
+                if type(block) == type(''):
                     ifStatement += ' '+block+' '
                 else:
                     res = block[0].split('.')
@@ -874,6 +883,8 @@ found = []
                     else:
                         if block[1] == '=':
                             logicalOperator = '=='
+                        elif block[1] == '<>':
+                            logicalOperator = '!='
                         else:
                             logicalOperator = block[1]
                         if block[2] == None:
@@ -895,17 +906,21 @@ found = []
             ifStatement += ":\n%sfound.append((%s))\n"%((tabDepth+1)*'    ',', '.join(tablesJoined))
             # 3. Now execute the code for each value in the database to get a list of keys
             try:
+                # print(ifStatement)
                 exec(ifStatement)
+                # print('-----', locals())
+                # print(locals()['found'])
             except:
                 raise Bug("Exception: "+str(sys.exc_info()[1])+"If: "+ifStatement+'\n\nWhere: '+str(where))
         else:
             return self.tables[table].file.keys()
-        return found
+        return locals()['found']
 
     def _getNewKey(self, table):
         if self._closed:
             raise Error('The connection to the database has been closed.')
-        if not self.tables.has_key(table):
+        # if not self.tables.has_key(table):
+        if table not in self.tables:
             raise InternalError("There is no such table '%s'."%table)
         else:
             for col in self.tables[table].columns:
@@ -918,12 +933,13 @@ found = []
                 keyints = []
                 for key in keys:
                     try:
-                        keyints.append(long(key))
+                        # keyints.append(long(key))
+                        keyints.append(int(key))
                     except:
                         raise Bug('Keys for tables without a PRIMARY KEY specified should be capable of being used as integers or longs, %s in not a valid key.'%(repr(key)))
                 m = max(keyints)
                 try:
-                    m = long(m)
+                    m = int(m)  # long(m)
                 except:
                     raise SQLError("Invalid primary key '%s' for the '%s' table."%(m, table))
                 else:
@@ -935,7 +951,8 @@ found = []
             raise Error('The connection to the database has been closed.')
         # Check the table doesn't already exist
         self.createdTables.append(table) # Add to the list of created tables in case of a rollback
-        if self.tables.has_key(table):
+        # if self.tables.has_key(table):
+        if table in self.tables:
             raise SQLError("Table '%s' already exists."%table)
         # Add the column information to the ColTypes table and the tableStructure
         if not self.tables[self.colTypesName].open:
@@ -970,7 +987,7 @@ found = []
                         f = c
                 if f == False:
                     raise SQLError('Table %s specified in FOREIGN KEY option does not have a PRIMARY KEY'%(repr(t)))
-                if column['type'].capitalize() <> f.type:
+                if column['type'].capitalize() != f.type:
                     raise SQLError('Column %s specified in FOREIGN KEY option is not of the same type %s as PRIMARY KEY in table %s'%(repr(f.name), repr(f.type), repr(t)))
             cols.append(
                 self.driver['Column'](
@@ -1001,7 +1018,7 @@ found = []
     def _drop(self, tables):
         if self._closed:
             raise Error('The connection to the database has been closed.')
-        if isinstance(tables, basestring):
+        if type(tables) == type(''):
             tables = [tables]
         for table in tables:
             if not self.tables.has_key(table):
@@ -1036,7 +1053,8 @@ found = []
     def _insert(self, table, columns, sqlValues=[], values=[]):
         if self._closed:
             raise Error('The connection to the database has been closed.')
-        if not self.tables.has_key(table):
+        # if not self.tables.has_key(table):
+        if table not in self.tables:
             raise SQLError("Table '%s' not found."%(table))
         internalValues, used = self._convertValuesToInternal(table, columns, sqlValues, values)
         if not self.tables[table].open:
@@ -1064,7 +1082,7 @@ found = []
                     row = self._getRow(table,primaryKey)
                     oldval = row[col.position]
                     val = internalValues[columns.index(name)]
-                    if val <> None and val == oldval:
+                    if val != None and val == oldval:
                         raise SQLError("The UNIQUE column '%s' already has a value '%s'."%(name,val))
             if col.required and name not in columns:
                 raise SQLError("The REQUIRED value '%s' has not been specified."%(name))
@@ -1120,7 +1138,8 @@ found = []
     def _update(self, table, columns, where=[], sqlValues=[], values=[]):
         if self._closed:
             raise Error('The connection to the database has been closed.')
-        if not self.tables.has_key(table):
+        # if not self.tables.has_key(table):
+        if table not in self.tables:
             raise SQLError("Table '%s' not found."%(table))
         internalValues, used = self._convertValuesToInternal(table, columns, sqlValues, values)
         where, used2 = self._convertWhereToInternal(table, where, values[used:])
@@ -1154,7 +1173,7 @@ found = []
                     if not primaryKey in keys:
                         oldval = self._getRow(table,primaryKey)[col.position]
                         val = internalValues[columns.index(col.name)]
-                        if val <> None and val == oldval:
+                        if val != None and val == oldval:
                             raise SQLError("The UNIQUE column '%s' already has a value '%s'."%(col.name,oldval))
             if col.required and col.name in columns and internalValues[columns.index(col.name)] == None:
                     raise SQLError("The REQUIRED value '%s' cannot be NULL."%(col.name))
@@ -1185,6 +1204,16 @@ found = []
         vals=[]
         #print keys
         for primaryKey in keys:
+            try:
+                row = self._getRow(table, primaryKey)
+                for pos in range(len(positions)):
+                    row[positions[pos]] = internalValues[pos]
+                self._updateRow(table, primaryKey, newkey, row)
+                vals.append(row)
+            except Exception as e:
+                print(e)
+                raise DatabaseError("Table %s has no row with the primary key %s."%(repr(table), repr(primaryKey)))
+            """
             if not self.tables[table].file.has_key(primaryKey):
                 raise DatabaseError("Table %s has no row with the primary key %s."%(repr(table), repr(primaryKey)))
             else:
@@ -1193,6 +1222,7 @@ found = []
                     row[positions[pos]] = internalValues[pos]
                 self._updateRow(table, primaryKey, newkey, row)
                 vals.append(row)
+            """
         return {
             'affectedRows': len(keys),
             'columns': columns,
@@ -1203,10 +1233,11 @@ found = []
     def _select(self, columns, tables, where, order, values=[]):
         if self._closed:
             raise Error('The connection to the database has been closed.')
-        if isinstance(tables, basestring):
+        if type(tables) == type(''):
             tables = [tables]
         for table in tables:
-            if not self.tables.has_key(table):
+            # if not self.tables.has_key(table):
+            if table not in self.tables:
                 raise SQLError("Table '%s' not found."%(table))
             if not self.tables[table].open:
                 self.tables[table]._load()
@@ -1243,7 +1274,7 @@ found = []
                     raise SQLSyntaxError("Expected table name followed by a '.' character before column name %s "%column)
                 else:
                     res = column.split('.')
-                    if len(res) <> 2:
+                    if len(res) != 2:
                         raise SQLError("Invalid column name %s too many '.' characters."%column)
                     cols.append(lengths[tables.index(res[0])]+self._getColumnPositions(res[0], [res[1]])[0])
         where, used = self._convertWhereToInternal(table, where, values)
@@ -1253,7 +1284,7 @@ found = []
         if keys:
             rows = []
             for results in keys:
-                if type(results) <> type((1,)):
+                if type(results) != type((1,)):
                     r = self._getRow(tables[0], results)
                 else:
                     r = []
@@ -1315,7 +1346,8 @@ found = []
     def _delete(self, table, where=[], values=[]):
         if self._closed:
             raise Error('The connection to the database has been closed.')
-        if not self.tables.has_key(table):
+        # if not self.tables.has_key(table):
+        if table not in self.tables:
             raise SQLError("Table '%s' not found."%(table))
         if not self.tables[table].open:
             self.tables[table]._load()
@@ -1355,10 +1387,17 @@ found = []
         for primaryKey in keys:
             if not self.tables[table].open:
                 self.tables[table]._load()
+            try:
+                self._deleteRow(table, primaryKey)
+            except Exception as e:
+                print(e)
+                raise DatabaseError("Table %s has no row with the primary key %s."%(repr(table), repr(primaryKey)))
+            """
             if not self.tables[table].file.has_key(primaryKey):
                 raise DatabaseError("Table %s has no row with the primary key %s."%(repr(table), repr(primaryKey)))
             else:
                 self._deleteRow(table, primaryKey)
+            """
         return {
             'affectedRows': len(keys),
             'columns': None,
@@ -1551,18 +1590,29 @@ class Cursor:
         elif parsedSQL['function'] == 'insert':
             self.info = self.connection._insert(parsedSQL['table'], parsedSQL['columns'], parsedSQL['sqlValues'], parameters)
         elif parsedSQL['function'] == 'update':
+            self.info = self.connection._update(
+                table=parsedSQL['table'], columns=parsedSQL['columns'],
+                where=parsedSQL.get('where', []), 
+                sqlValues=parsedSQL['sqlValues'], values=parameters)
+            """
             if parsedSQL.has_key('where'):
                 self.info = self.connection._update(parsedSQL['table'], parsedSQL['columns'], parsedSQL['where'], parsedSQL['sqlValues'], parameters)
             else:
                 self.info = self.connection._update(parsedSQL['table'], parsedSQL['columns'], sqlValues = parsedSQL['sqlValues'], values = parameters)
+            """
         elif parsedSQL['function'] == 'select':
             del parsedSQL['function']
             return self.select(**parsedSQL)
         elif parsedSQL['function'] == 'delete':
+            self.info = self.connection._delete(
+                parsedSQL['table'], where=parsedSQL.get('where', []),
+                values=parameters)
+            """
             if parsedSQL.has_key('where'):
                 self.info = self.connection._delete(parsedSQL['table'], parsedSQL['where'], parameters)
             else:
                 self.info = self.connection._delete(parsedSQL['table'], values=parameters)
+            """
         elif parsedSQL['function'] == 'show':
             self.info = self.connection._showTables()
         else:
@@ -1677,7 +1727,7 @@ class Cursor:
             if format == None:
                 format = self.format
             if format == 'text':
-                if results <> None:
+                if results != None:
                     return table(self.info['columns'], results, mode='sql')
             else:
                 rows = []
@@ -1841,18 +1891,18 @@ class Cursor:
         #    raise NotSupportedError("SnakeSQL doesn't support the DISTINCT keyword.")
         if format == None:
             format = self.format
-        if isinstance(columns, basestring):
+        if type(columns) == type(''):
             columns = [columns]
-        if isinstance(tables, basestring):
+        if type(tables) == type(''):
             tables = [tables]
         if execute == False:
             return self.connection.parser.buildSelect(tables, columns, where, order)
         else:
             # Don't need to worry about convertResult since it is taken care of in fetchRows()
             # Don't need to worry about format since it is taken care of in fetchRows()
-            if isinstance(where, basestring):
+            if type(where) == type(''):
                 where = self.where(where)
-            if isinstance(order, basestring):
+            if type(order) == type(''):
                 order = self.order(order)
             #if columns == ['*']:
             #    columns = self.columns(table)
@@ -1867,15 +1917,15 @@ class Cursor:
     def insert(self, table, columns, values=None, sqlValues=None, execute=None):
         if sqlValues == None and values == None:
             raise SQLError('You must specify either values or sqlValues, they can be []')
-        if sqlValues <> None and values <> None:
+        if sqlValues != None and values != None:
             raise SQLError('You cannot specify both values and sqlvalues')
-        if isinstance(columns, basestring):
+        if type(columns) == type(''):
             columns = [columns]
         if type(values) not in [type((1,)), type([])]:
             values = [values]
         if type(sqlValues) not in [type((1,)), type([])]:
             sqlValues = [sqlValues]
-        if (sqlValues <> [None] and len(columns) <> len(sqlValues)) or (values <> [None] and len(columns) <> len(values)):
+        if (sqlValues != [None] and len(columns) != len(sqlValues)) or (values != [None] and len(columns) != len(values)):
             raise SQLError('The number of columns does not match the number of values')
         if execute == False:                
             if sqlValues == [None]:
@@ -1898,15 +1948,15 @@ class Cursor:
     def update(self, table, columns, values=None, sqlValues=None, where=None, execute=None):
         if sqlValues == None and values == None:
             raise SQLError('You must specify either values or sqlValues, they can be []')
-        if sqlValues <> None and values <> None:
+        if sqlValues != None and values != None:
             raise SQLError('You cannot specify both values and sqlvalues')
-        if isinstance(columns, basestring):
+        if type(columns) == type(''):
             columns = [columns]
         if type(values) not in [type((1,)), type([])]:
             values = [values]
         if type(sqlValues) not in [type((1,)), type([])]:
             sqlValues = [sqlValues]
-        if (sqlValues <> [None] and len(columns) <> len(sqlValues)) or (values <> [None] and len(columns) <> len(values)):
+        if (sqlValues != [None] and len(columns) != len(sqlValues)) or (values != [None] and len(columns) != len(values)):
             raise SQLError('The number of columns does not match the number of values')
         if execute == False:                
             if sqlValues == [None]:
@@ -1919,7 +1969,7 @@ class Cursor:
                     sqlValues.append(self.connection.driver['converters'][self.connection.tables[table].get(columns[i]).type.capitalize()].valueToSQL(values[i]))
             return self.connection.parser.buildUpdate(table, columns, sqlValues, where)
         else:
-            if isinstance(where, basestring):
+            if type(where) == type(''):
                 where = self.where(where)
             self.info = self.connection._update(
                 table=table, 
@@ -1933,7 +1983,7 @@ class Cursor:
         if execute == False:
             return self.connection.parser.buildDelete(table, where)
         else:
-            if isinstance(where, basestring):
+            if type(where) == type(''):
                 where = self.where(where)
             self.info = self.connection._delete(
                 table=table, 
@@ -1944,7 +1994,7 @@ class Cursor:
     def create(self, table, columns, execute=None):
         f = []
         for column in columns:
-            if isinstance(column, basestring):
+            if type(column) == type(''):
                 f.append(self.column(column))
             else:
                 f.append(column)        
@@ -2023,11 +2073,11 @@ class Cursor:
             raise InterfaceError("Parmeter 'name' not specified correctly for the column")
         if values['type'] == None:
             raise InterfaceError("Parmeter 'name' not specified correctly for the column")
-        if values['primaryKey'] and values['default'] <> None:
+        if values['primaryKey'] and values['default'] != None:
             raise InterfaceError("A PRIMARY KEY column cannot also have a default value")
-        if values['primaryKey'] and values['foreignKey'] <> None:
+        if values['primaryKey'] and values['foreignKey'] != None:
             raise InterfaceError("A PRIMARY KEY column cannot be a FOREIGN KEY value")
-        if values['default'] and values['foreignKey'] <> None:
+        if values['default'] and values['foreignKey'] != None:
             raise InterfaceError("A FOREIGN KEY column cannot also have a default value")
         for i in ['required', 'unique', 'primaryKey']:
             if values[i] not in [0,1,True,False]:

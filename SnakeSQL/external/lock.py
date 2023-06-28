@@ -3,6 +3,10 @@ Based on ideas in glock in the ASPN cookbook."""
 
 # Imports
 import os, time
+import logging
+
+
+log = logging.getLogger()
 
 # Errors
 class TimeOut(Exception):
@@ -13,11 +17,11 @@ class TransactionError(Exception):
     pass
     
 # Set up True and False
-try:
-    True
-except NameError:
-    True = (1==1)
-    False = (1==0)
+# try:
+#     True
+# except NameError:
+#     True = (1==1)
+#     False = (1==0)
 
 # Locking
 class Lock:
@@ -37,14 +41,15 @@ class Lock:
     def __del__(self):
         if len(self.files):
             if self.warn:
-                print "Closing locks.. some locks remain and will be removed.."
-        for lock in self.files.keys():
+                log.warning("Closing locks.. some locks remain and will be removed..")
+        for lock in [k for k in self.files.keys()]:
             if self.warn:
-                print "Removing lock on '%s'."%lock
+                log.warning("Removing lock on '%s'." % lock)
             self.unlock(lock)
             
     def lock(self, filename):
-        if self.files.has_key(filename):
+        # if self.files.has_key(filename):
+        if filename in self.files:
             raise LockError('Use relock() to relock an already locked file.')
         for t in range(0, self.timeout+1):
             if self._isLockInPlace(filename):
@@ -53,14 +58,14 @@ class Lock:
                     cur = int(time.time())
                     if cur > os.stat(filename+'_lock2')[8]+self.expire and cur > os.stat(filename+'_lock')[8]+self.expire:
                         if self.warn:
-                            print "Lock expired.. removing lock and making a new lock."
+                            log.warning("Lock expired.. removing lock and making a new lock.")
                         return self._relock(filename, restore=True)
                 elif self.warn:
-                    if t <> self.timeout:
-                        print "Lock already in place.. waiting 1 second."
+                    if t != self.timeout:
+                        log.warning("Lock already in place.. waiting 1 second.")
             else:
                 if self.warn:
-                    print "Locking file '%s'."%filename
+                    log.warning("Locking file '%s'." % filename)
                 self._lock(filename)
                 return 1
             if t == self.timeout: # Run once more.. just in case.
@@ -69,7 +74,7 @@ class Lock:
                 time.sleep(1)
         if self.removeLock:
             if self.warn:
-                print 'Forcing lock removal'
+                log.warning('Forcing lock removal')
             self._relock(filename, restore=True)
         else:
             raise TimeOut('File already locked. Timeout occured.')
@@ -81,7 +86,7 @@ class Lock:
             try:
                 self._relock(filename)
                 if self.warn:
-                    print "Relocked file '%s'."%filename
+                    log.warning("Relocked file '%s'." % filename)
                 return 1
             except:
                 raise LockError('reLock() failed.')
@@ -93,7 +98,7 @@ class Lock:
             try:
                 self._unlock(filename)
                 if self.warn:
-                    print "Unlocked file '%s'."%filename
+                    log.warning("Unlocked file '%s'." % filename)
                 return 1
             except:
                 return 0
@@ -109,13 +114,14 @@ class Lock:
         return False
         
     def _isLockOurs(self, filename):
-        if not self.files.has_key(filename):
+        # if not self.files.has_key(filename):
+        if filename not in self.files:
             if self.warn:
-                print "Nothing known about lock on '%s'."%filename
+                log.warning("Nothing known about lock on '%s'." % filename)
             return 0
-        elif self.files[filename] <> os.stat(filename+'_lock2')[8]:
+        elif self.files[filename] != os.stat(filename+'_lock2')[8]:
             if self.warn:
-                print "Lock create time for '%s' doesn't match record.. lock is not ours."%filename
+                log.warning("Lock create time for '%s' doesn't match record.. lock is not ours." % filename)
             return 0
         return 1
         

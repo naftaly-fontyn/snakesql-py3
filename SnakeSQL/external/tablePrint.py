@@ -1,17 +1,17 @@
 
 # Check Bools are defined
-try:
-    True
-except NameError:
-    True = 1
-    False = 0
+# try:
+#     True
+# except NameError:
+#     True = 1
+#     False = 0
 
 def table(columns, values, width=80, mode=None):
 
     # Verify Data
     length = len(columns)
     for i in range(len(values)):
-        if length <> len(values[i]):
+        if length != len(values[i]):
             raise Exception("There are %s columns but row %s of values contains %s value(s)."%(length, i, len(values[i])))
     
     # Format the data if asked
@@ -39,7 +39,7 @@ def table(columns, values, width=80, mode=None):
     values = vals
     
     # Get the column widths
-    if (width <> None) and (width < 0 or type(width) <> type(1)):
+    if (width != None) and (width < 0 or type(width) != type(1)):
         raise Exception('The output width must be an integer greater than 0.')
     else:
         d = {}

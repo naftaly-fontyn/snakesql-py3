@@ -1,14 +1,14 @@
 
 
 # Set up True and False
-try:
-    True
-except NameError:
-    True = (1==1)
-    False = (1==0)
+# try:
+#     True
+# except NameError:
+#     True = (1==1)
+#     False = (1==0)
     
 import os.path, sys
-import base
+import driver.base as base
 sys.path.append('../external') # For lockdbm
 sys.path.append('../') # For errors
 import lockdbm
@@ -56,9 +56,16 @@ class DBMConnection(base.BaseConnection):
     def _insertRow(self, table, primaryKey, values, types=None):
         if self._closed:
             raise Error('The connection to the database has been closed.')
+        try:
+            self.tables[table].file[str(primaryKey)] = str(values)
+        except Exception as e:
+            print(e)
+            raise Bug('Key %s already exists in table %s'%(repr(str(primaryKey)), repr(table)))
+        """
         if self.tables[table].file.has_key(str(primaryKey)):
             raise Bug('Key %s already exists in table %s'%(repr(str(primaryKey)), repr(table)))
         self.tables[table].file[str(primaryKey)] = str(values)
+        """
 
     def _deleteRow(self, table, primaryKey):
         if self._closed:
@@ -68,10 +75,19 @@ class DBMConnection(base.BaseConnection):
     def _getRow(self, table, primaryKey):
         if self._closed:
             raise Error('The connection to the database has been closed.')
-        if not self.tables[table].file.has_key(str(primaryKey)):
+        # if not self.tables[table].file.has_key(str(primaryKey)):
+        try: 
+            return eval(self.tables[table].file[primaryKey])
+        except Exception as e:
+            print(e)
+            raise Bug('No such key %s exists in table %s'%(repr(str(primaryKey)), repr(table)))
+        """
+        if primaryKey is not self.tables[table].file:
+            print(primaryKey, [k for k in self.tables[table].file])
             raise Bug('No such key %s exists in table %s'%(repr(str(primaryKey)), repr(table)))
         row = self.tables[table].file[str(primaryKey)]
         return eval(row)
+        """
     
     def _updateRow(self, table, oldkey, newkey, values):
         if self._closed:
@@ -79,8 +95,15 @@ class DBMConnection(base.BaseConnection):
         if newkey == None:
             newkey=oldkey
         del self.tables[table].file[oldkey]  # XXX Is this a bug in dumbdbm?
+        try:
+            self.tables[table].file.has_key(newkey)
+            raise Bug("The table %s already has a PRIMARY KEY named %s. This error should have been caught earlier."%(repr(table) ,repr(newkey)))
+        except:
+            pass
+        """
         if self.tables[table].file.has_key(newkey):
             raise Bug("The table %s already has a PRIMARY KEY named %s. This error should have been caught earlier."%(repr(table) ,repr(newkey)))
+        """
         self.tables[table].file[newkey] = str(values)
         return values
 
