@@ -6,8 +6,10 @@ Note: Deleting a row changes all the keys
 """
 
 # Imports
-import lock, os
-from StringParsers import parseCSV, buildCSV
+import os
+from . import lock
+
+from .StringParsers import parseCSV, buildCSV
 
 class InvalidKey(Exception):
     pass
@@ -15,14 +17,6 @@ class InvalidRow(Exception):
     pass
 _open = open
 
-# Set up True and False
-# try:
-#     True
-# except NameError:
-#     True = (1==1)
-#     False = (1==0)
-
-# Python 2.1 os.extsep
 try:
     extsep = os.extsep
 except AttributeError:

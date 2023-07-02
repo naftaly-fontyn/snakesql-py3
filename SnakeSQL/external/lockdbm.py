@@ -8,7 +8,9 @@ Python 2.1 doesn't support the mode parameter.
 """
 
 # Imports
-import sys, lock, os
+import os
+import sys
+from . import lock
 import dbm.dumb as dumbdbm
 import builtins
 

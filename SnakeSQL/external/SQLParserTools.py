@@ -8,8 +8,8 @@
 #     False = 0
 
 # Imports
-from error import *
-from external.StringParsers import *
+from ..error import *
+from .StringParsers import *
 import functools
 import string
 
@@ -71,23 +71,28 @@ soonToBe = [
     'DATABASE',
 ]
 
+
 # Ensure list items are all uppercase if set extrenally
 def setTypes(list):
     for i in range(len(list)):
         list[i] = list[i].upper()
-    types = list
+    # types = list
+
 
 # SQLParser
 class Parser:
     """Class for parsing SQL Code into more useful forms.
 
     Notes
-     - Error checking is done at this stage. For example, checking that no duplicate column names are specified in an INSERT or CREATE.
-     - Values returned from this parser are fully quoted SQL eg NULL, 'NULL', ?, '?', 56, '56', 'James', 'James''s'
-    
+     - Error checking is done at this stage. For example, checking that no
+       duplicate column names are specified in an INSERT or CREATE.
+     - Values returned from this parser are fully quoted SQL eg NULL, 'NULL',
+       ?, '?', 56, '56', 'James', 'James''s'
+
     Restrictions
      - No newline characters should be used in the SQL except in quoted values.
     """
+
     def parse(self, sql):
         "Parse an SQL statement"
         stripped = stripBoth(sql.split(' '))
@@ -1184,7 +1189,7 @@ class Builder:
         for column in columns:
             f = []
             for param in ['name','type','required','unique','primaryKey','foreignKey','default']:
-                if not column.has_key(param):
+                if param not in column:
                     raise DataError('Expected the parameter %s in the column dictionary'%(repr(param)))
             for name in ['name', 'type']:
                 if type(column['name']) != type(''):

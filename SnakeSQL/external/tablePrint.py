@@ -1,12 +1,6 @@
 
-# Check Bools are defined
-# try:
-#     True
-# except NameError:
-#     True = 1
-#     False = 0
 
-def table(columns, values, width=80, mode=None):
+def table_print(columns, values, width=80, mode=None):
 
     # Verify Data
     length = len(columns)

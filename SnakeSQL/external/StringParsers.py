@@ -6,12 +6,6 @@
 class ParserError(Exception):
     pass
 
-# Check Bools are defined
-# try:
-#     True
-# except NameError:
-#     True = 1
-#     False = 0
     
 # Define functions
 def stripEnd(line, whitespace=' '):

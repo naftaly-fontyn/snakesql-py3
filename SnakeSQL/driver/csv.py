@@ -1,30 +1,34 @@
+"""
+"""
 
+import os
+# import sys
+# from .cursor_base import 
+from .table_base import (BaseTable, BaseColumn,
+                         BaseUnknownConverter, BaseStringConverter,
+                         BaseTextConverter, BaseBinaryConverter,
+                         BaseBoolConverter, BaseIntegerConverter,
+                         BaseLongConverter, BaseFloatConverter,
+                         BaseDateConverter, BaseDatetimeConverter,
+                         BaseTimeConverter)
+from .connection_base import BaseConnection
+from . import dbm
+from ..external import lockcsv
+from ..error import *
 
-# Set up True and False
-# try:
-#     True
-# except NameError:
-#     True = (1==1)
-#     False = (1==0)
-    
-
-import os.path, sys
-import driver.base as base
-import driver.dbm as dbm
-import lockcsv
-from error import *
 
 class CSVTable(dbm.DBMTable):
     def _load(self):
         self.file = lockcsv.open(self.filename)
         self.open = True
 
-        
-class CSVConnection(base.BaseConnection):
+
+class CSVConnection(BaseConnection):
     def __init__(self, database, driver, autoCreate, colTypesName):
         self._closed = None
         self.tableExtensions = ['.csv']
-        base.BaseConnection.__init__(self, database=database, driver=driver, autoCreate=autoCreate, colTypesName=colTypesName)
+        super().__init__(database=database, driver=driver,
+                         autoCreate=autoCreate, colTypesName=colTypesName)
         self._closed = False
 
                     
@@ -101,21 +105,22 @@ class CSVConnection(base.BaseConnection):
         self.tables[table].file[oldkey] = v
         return values
 
+
 driver = {
-    'converters' : {
-        'Unknown':  base.BaseUnknownConverter(),
-        'String':   base.BaseStringConverter(),
-        'Text':     base.BaseTextConverter(),
-        'Binary':   base.BaseBinaryConverter(),
-        'Bool':     base.BaseBoolConverter(),
-        'Integer':  base.BaseIntegerConverter(),
-        'Long':     base.BaseLongConverter(),
-        'Float':    base.BaseFloatConverter(),
-        'Date':     base.BaseDateConverter(),
-        'Datetime': base.BaseDatetimeConverter(), # Decision already made.
-        'Time':     base.BaseTimeConverter(),
+    'converters': {
+        'Unknown':  BaseUnknownConverter(),
+        'String': BaseStringConverter(),
+        'Text': BaseTextConverter(),
+        'Binary': BaseBinaryConverter(),
+        'Bool': BaseBoolConverter(),
+        'Integer': BaseIntegerConverter(),
+        'Long': BaseLongConverter(),
+        'Float': BaseFloatConverter(),
+        'Date': BaseDateConverter(),
+        'Datetime': BaseDatetimeConverter(),  # Decision already made.
+        'Time': BaseTimeConverter(),
     },
-    'Table':CSVTable,
-    'Column':base.BaseColumn,
-    'Connection':CSVConnection,
+    'Table': CSVTable,
+    'Column': BaseColumn,
+    'Connection': CSVConnection,
 }

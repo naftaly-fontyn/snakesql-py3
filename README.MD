@@ -19,3 +19,9 @@ As the original code is GPL 2 I have to honer and cant change its so it is GPL 2
 - [ ] Write tests using the test module
 - [ ] Formate per PEP-8 the code
 - [ ] restyle code to be more Pythonic  “Ask forgiveness, not permission” (there are to many `if` test in the code convert to `try/except`)
+- [ ] Replace old `%` format strings withe `format` method anf `f""`
+- [ ] Convert print statements to loggings
+- [ ] Try to eliminate globals/outer scope reference of variables
+- [ ] Eliminate use of keywords as variables
+- [ ] `driver\base.py` is to long, refractor
+- [ ] Add `CREATE TABLE IF NOT EXISTS <table>`

@@ -1,39 +1,43 @@
+"""
+"""
+
+import os
+import sys
+# from .cursor_base import Cursor
+from .table_base import (BaseTable, BaseColumn,
+                         BaseUnknownConverter, BaseStringConverter,
+                         BaseTextConverter, BaseBinaryConverter,
+                         BaseBoolConverter, BaseIntegerConverter,
+                         BaseLongConverter, BaseFloatConverter,
+                         BaseDateConverter, BaseDatetimeConverter,
+                         BaseTimeConverter)
+from .connection_base import BaseConnection
+from ..external import lockdbm
+from ..error import Error, Bug
 
 
-# Set up True and False
-# try:
-#     True
-# except NameError:
-#     True = (1==1)
-#     False = (1==0)
-    
-import os.path, sys
-import driver.base as base
-sys.path.append('../external') # For lockdbm
-sys.path.append('../') # For errors
-import lockdbm
-from error import *
-
-class DBMTable(base.BaseTable):
+class DBMTable(BaseTable):
     def _load(self):
         self.file = lockdbm.open(self.filename)
         self.open = True
 
     def _close(self):
         self.file.close()
-        self.open=False
+        self.open = False
 
     def commit(self):
         self.file.commit()
 
     def rollback(self):
         self.file.rollback()
-        
-class DBMConnection(base.BaseConnection):
+
+
+class DBMConnection(BaseConnection):
     def __init__(self, database, driver, autoCreate, colTypesName):
         self._closed = None
-        self.tableExtensions = ['.dir','.dat','.bak']
-        base.BaseConnection.__init__(self, database=database, driver=driver, autoCreate=autoCreate, colTypesName=colTypesName)
+        self.tableExtensions = ['.dir', '.dat', '.bak']
+        super().__init__(database=database, driver=driver,
+                         autoCreate=autoCreate, colTypesName=colTypesName)
         self._closed = False
 
     # Useful methods
@@ -41,7 +45,11 @@ class DBMConnection(base.BaseConnection):
         "Return True if the database exists, False otherwise."
         if self._closed:
             raise Error('The connection to the database has been closed.')
-        if os.path.exists(self.database) and os.path.exists(self.database+os.sep+self.colTypesName+'.dir') and os.path.exists(self.database+os.sep+self.colTypesName+'.dat') and os.path.exists(self.database+os.sep+self.colTypesName+'.bak'):
+        base_path = os.path.join(self.database, self.colTypesName)
+        if (os.path.exists(self.database) and
+                os.path.exists(base_path + '.dir') and
+                os.path.exists(base_path + '.dat') and
+                os.path.exists(base_path + '.bak')):
             return True
         else:
             return False
@@ -50,7 +58,7 @@ class DBMConnection(base.BaseConnection):
         if self._closed:
             raise Error('The connection to the database has been closed.')
         for end in self.tableExtensions:
-            #if os.path.exists(self.database+os.sep+table+end):
+            # if os.path.exists(self.database+os.sep+table+end):
             os.remove(self.database+os.sep+table+end)
 
     def _insertRow(self, table, primaryKey, values, types=None):
@@ -60,10 +68,12 @@ class DBMConnection(base.BaseConnection):
             self.tables[table].file[str(primaryKey)] = str(values)
         except Exception as e:
             print(e)
-            raise Bug('Key %s already exists in table %s'%(repr(str(primaryKey)), repr(table)))
+            raise Bug('Key %s already exists in table %s' %
+                      (repr(str(primaryKey)), repr(table)))
         """
         if self.tables[table].file.has_key(str(primaryKey)):
-            raise Bug('Key %s already exists in table %s'%(repr(str(primaryKey)), repr(table)))
+            raise Bug('Key %s already exists in table %s' %
+                      (repr(str(primaryKey)), repr(table)))
         self.tables[table].file[str(primaryKey)] = str(values)
         """
 
@@ -76,52 +86,60 @@ class DBMConnection(base.BaseConnection):
         if self._closed:
             raise Error('The connection to the database has been closed.')
         # if not self.tables[table].file.has_key(str(primaryKey)):
-        try: 
+        try:
             return eval(self.tables[table].file[primaryKey])
         except Exception as e:
             print(e)
-            raise Bug('No such key %s exists in table %s'%(repr(str(primaryKey)), repr(table)))
+            raise Bug('No such key %s exists in table %s' %
+                      (repr(str(primaryKey)), repr(table)))
         """
         if primaryKey is not self.tables[table].file:
             print(primaryKey, [k for k in self.tables[table].file])
-            raise Bug('No such key %s exists in table %s'%(repr(str(primaryKey)), repr(table)))
+            raise Bug('No such key %s exists in table %s' %
+                      (repr(str(primaryKey)), repr(table)))
         row = self.tables[table].file[str(primaryKey)]
         return eval(row)
         """
-    
+
     def _updateRow(self, table, oldkey, newkey, values):
         if self._closed:
             raise Error('The connection to the database has been closed.')
-        if newkey == None:
-            newkey=oldkey
+        if newkey is None:
+            newkey = oldkey
         del self.tables[table].file[oldkey]  # XXX Is this a bug in dumbdbm?
         try:
             self.tables[table].file.has_key(newkey)
-            raise Bug("The table %s already has a PRIMARY KEY named %s. This error should have been caught earlier."%(repr(table) ,repr(newkey)))
-        except:
+            raise Bug("The table %s already has a PRIMARY KEY named %s. This "
+                      "error should have been caught earlier." %
+                      (repr(table), repr(newkey)))
+        except Exception:
             pass
+            # raise
         """
         if self.tables[table].file.has_key(newkey):
-            raise Bug("The table %s already has a PRIMARY KEY named %s. This error should have been caught earlier."%(repr(table) ,repr(newkey)))
+            raise Bug("The table %s already has a PRIMARY KEY named %s. This "
+                      "error should have been caught earlier." %
+                      (repr(table) ,repr(newkey)))
         """
         self.tables[table].file[newkey] = str(values)
         return values
 
+
 driver = {
-    'converters' : {
-        'Unknown':  base.BaseUnknownConverter(),
-        'String':   base.BaseStringConverter(),
-        'Text':     base.BaseTextConverter(),
-        'Binary':   base.BaseBinaryConverter(),
-        'Bool':     base.BaseBoolConverter(),
-        'Integer':  base.BaseIntegerConverter(),
-        'Long':     base.BaseLongConverter(),
-        'Float':    base.BaseFloatConverter(),
-        'Date':     base.BaseDateConverter(),
-        'Datetime': base.BaseDatetimeConverter(), # Decision already made.
-        'Time':     base.BaseTimeConverter(),
+    'converters': {
+        'Unknown':  BaseUnknownConverter(),
+        'String':   BaseStringConverter(),
+        'Text':     BaseTextConverter(),
+        'Binary':   BaseBinaryConverter(),
+        'Bool':     BaseBoolConverter(),
+        'Integer':  BaseIntegerConverter(),
+        'Long':     BaseLongConverter(),
+        'Float':    BaseFloatConverter(),
+        'Date':     BaseDateConverter(),
+        'Datetime': BaseDatetimeConverter(),  # Decision already made.
+        'Time':     BaseTimeConverter(),
     },
-    'Table':DBMTable,
-    'Column':base.BaseColumn,
-    'Connection':DBMConnection,
+    'Table': DBMTable,
+    'Column': BaseColumn,
+    'Connection': DBMConnection,
 }
