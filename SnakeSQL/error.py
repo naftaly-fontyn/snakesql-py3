@@ -1,7 +1,9 @@
 "DB-API 2.0 Exceptions"
 
-# Note: By convention, errors should not end with full stops and should be single sentances.
+# Note: By convention, errors should not end with full stops and should be
+# single sentances.
 # import exceptions
+
 
 class Error(Exception):
     """Exception that is the base class of all other error
@@ -12,6 +14,7 @@ class Error(Exception):
     module exceptions)."""
     pass
 
+
 class Warning(Exception):
     """Exception raised for important warnings like data
     truncations while inserting, etc. It must be a subclass of
@@ -19,16 +22,19 @@ class Warning(Exception):
     exceptions)."""
     pass
 
+
 class InterfaceError(Error):
     """Exception raised for errors that are related to the
     database interface rather than the database itself.  It
     must be a subclass of Error."""
     pass
 
+
 class DatabaseError(Error):
     """Exception raised for errors that are related to the
     database.  It must be a subclass of Error."""
     pass
+
 
 class InternalError(DatabaseError):
     """Exception raised when the database encounters an internal
@@ -37,11 +43,13 @@ class InternalError(DatabaseError):
     DatabaseError."""
     pass
 
+
 class OperationalError(DatabaseError):
     """Exception raised for errors that are due to problems with
     the processed data like division by zero, numeric value
     out of range, etc. It must be a subclass of DatabaseError."""
     pass
+
 
 class ProgrammingError(DatabaseError):
     """Exception raised for programming errors, e.g. table not
@@ -50,17 +58,20 @@ class ProgrammingError(DatabaseError):
     must be a subclass of DatabaseError."""
     pass
 
+
 class IntegrityError(DatabaseError):
     """Exception raised when the relational integrity of the
     database is affected, e.g. a foreign key check fails.  It
     must be a subclass of DatabaseError."""
     pass
 
+
 class DataError(DatabaseError):
     """Exception raised for errors that are due to problems with
     the processed data like division by zero, numeric value
     out of range, etc. It must be a subclass of DatabaseError."""
     pass
+
 
 class NotSupportedError(DatabaseError):
     """Exception raised in case a method or database API was used
@@ -70,22 +81,36 @@ class NotSupportedError(DatabaseError):
     subclass of DatabaseError."""
     pass
 
-# Custom SnakeSQL Errors
 
+# Custom SnakeSQL Errors
 class CorruptionError(OperationalError):
     pass
+
+
 class SQLError(ProgrammingError):
     pass
+
+
 class SQLKeyError(SQLError):
     pass
+
+
 class SQLForeignKeyError(IntegrityError):
     pass
+
+
 class ConverterError(SQLError):
     pass
+
+
 class ConversionError(ConverterError):
     pass
+
+
 class Bug(DatabaseError):
-    "These Exceptions should never be raised.. if they are it is most likely a bug."
+    "Exceptions should never be raised. if they are it is most likely a bug."
     pass
+
+
 class SQLSyntaxError(SQLError):
     pass

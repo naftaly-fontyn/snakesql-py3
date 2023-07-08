@@ -19,6 +19,7 @@ from ..error import (Bug, ConversionError, DatabaseError, Error, SQLError,
                      SQLSyntaxError, SQLForeignKeyError, SQLKeyError)
 import sys
 import os
+from typing import Union
 import logging
 from ..external import SQLParserTools
 from .cursor_base import Cursor
@@ -28,7 +29,9 @@ log = logging.getLogger()
 
 class BaseConnection:
     # Other Methods
-    def __init__(self, database, driver, autoCreate, colTypesName):
+    def __init__(self, database: str, driver: str, autoCreate: bool,
+                 colTypesName: str):
+        # todo: change colTypesName to master_table_name
         self.database = database
         self.driver = driver
         self.colTypesName = colTypesName
@@ -119,21 +122,28 @@ class BaseConnection:
         return Cursor(self)
 
     # Type conversions
-    def _getConverters(self, table, columns):
+    def _getConverters(self, table: str, columns):
         if self._closed:
             raise Error('The connection to the database has been closed.')
         typeConverters = []
         sqlConverters = []
+        try:
+            table_ = self.tables[table]
+        except KeyError:
+            # if table not in self.tables:
+            raise SQLError(f"Table '{table}' doesn't exist.")
         for column in columns:
-            if table not in self.tables:
-                raise SQLError(f"Table '{table}' doesn't exist.")
-            if not self.tables[table].columnExists(column):
+            # if not self.tables[table].columnExists(column):
+            #     raise SQLError(
+            #         f"Table '{table}' has no column named '{column}'.")
+            try:
+                column_type = table_.get(column).type.capitalize()
+                column_converter = self.driver['converters'][column_type]
+                typeConverters.append(column_converter.valueToStorage)
+                sqlConverters.append(column_converter.SQLToStorage)
+            except KeyError:
                 raise SQLError(
                     f"Table '{table}' has no column named '{column}'.")
-            column_type = self.tables[table].get(column).type.capitalize()
-            column_converter = self.driver['converters'][column_type]
-            typeConverters.append(column_converter.valueToStorage)
-            sqlConverters.append(column_converter.SQLToStorage)
         return sqlConverters, typeConverters
 
     # SQL helpers
@@ -221,7 +231,7 @@ class BaseConnection:
                 self.driver['Column'](
                     table=v[0],
                     name=v[1],
-                    type=v[2],
+                    col_type=v[2],
                     required=v[3],
                     unique=v[4],
                     primaryKey=v[5],

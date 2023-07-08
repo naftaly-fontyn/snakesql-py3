@@ -80,7 +80,7 @@ import time
 
 
 # Might be useful
-def tableDump(file):
+def tableDump(file: str):
     dump = ''
     dbm = lockdbm.open(file)
     for key in dbm.keys():
@@ -89,7 +89,7 @@ def tableDump(file):
     return dump
 
 
-def connect(database, driver='dbm', autoCreate=False):
+def connect(database, driver: str = 'dbm', autoCreate: bool = False):
     """Constructor for creating a connection to the database.
     Returns a Connection Object. It takes a number of
     parameters which are database dependent."""

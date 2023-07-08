@@ -131,7 +131,7 @@ def updateTest(cursor: SnakeSQL.Cursor):
         pass
     else:
         log.debug("FAILED Update test.")
-        log.debug(results3, VALUES)
+        log.debug(f'\n={results1} \n= {results2} \n= {results3}: \n {VALUES}')
         raise Exception()
 
 
@@ -180,14 +180,10 @@ def typesTest():
 
 # START test class
 class TestDbApi2(unittest.TestCase):
+    """
     def setUp(self):
         super().setUp()
         # remove DB if exists
-        if os.path.exists(os.path.join(TEST_PATH, '_testdbm')):
-            shutil.rmtree(os.path.join(TEST_PATH, '_testdbm'))
-        if os.path.exists(os.path.join(TEST_PATH, '_testcsv')):
-            shutil.rmtree(os.path.join(TEST_PATH, '_testcsv'))
-    """
     def tearDown(self):
         ...
     """
@@ -196,6 +192,8 @@ class TestDbApi2(unittest.TestCase):
         """
         Test that it can sum a list of integers
         """
+        if os.path.exists(os.path.join(TEST_PATH, '_testdbm')):
+            shutil.rmtree(os.path.join(TEST_PATH, '_testdbm'))
         connection = SnakeSQL.connect(
             os.path.join(TEST_PATH, '_testdbm'), driver='dbm', autoCreate=True)
         cursor = connection.cursor()
@@ -208,6 +206,8 @@ class TestDbApi2(unittest.TestCase):
         """
         Test that it can sum a list of integers
         """
+        if os.path.exists(os.path.join(TEST_PATH, '_testcsv')):
+            shutil.rmtree(os.path.join(TEST_PATH, '_testcsv'))
         connection = SnakeSQL.connect(
             os.path.join(TEST_PATH, '_testcsv'), driver='csv', autoCreate=True)
         # log.info(connection)
@@ -249,11 +249,12 @@ class TestDbApi2(unittest.TestCase):
             self.assertEqual(re_build, s)
 
     def test_curser_interface(self):
+
         if os.path.exists(os.path.join(TEST_PATH, '_test_cruser')):
             shutil.rmtree(os.path.join(TEST_PATH, '_test_cruser'))
 
-        connection = SnakeSQL.connect('_test_cruser', driver='dbm',
-                                      autoCreate=True)
+        connection = SnakeSQL.connect(os.path.join(TEST_PATH, '_test_cruser'),
+                                      driver='dbm', autoCreate=True)
         cursor = connection.cursor()
         sql = cursor.create(
             table='test',
