@@ -2,8 +2,8 @@
 
 Rationale
 ---------
-By making all the conversion names the same it makes it easier to convert 
-a loop: 
+By making all the conversion names the same it makes it easier to convert
+a loop:
     for i in range(len(columns)):
         table[tableName][i].valueToSQL(values[i])
 By having the type as a member
@@ -14,19 +14,30 @@ Really need to make proper use of these functions rather than eval() as
 implementors of other drivers may have problems
 """
 
-from ..error import (Bug, ConversionError, DatabaseError, Error, SQLError,
-                   ConverterError, CorruptionError, InternalError,
-                   SQLSyntaxError, SQLForeignKeyError, SQLKeyError,
-                   InterfaceError, DataError)
+from ..error import (Bug, InterfaceError, DataError, Error, SQLError,
+                     # ConversionError, DatabaseError, ConverterError,
+                     # CorruptionError, InternalError,
+                     # SQLSyntaxError, SQLForeignKeyError, SQLKeyError,
+                     )
 from ..external.tablePrint import table_print
-import datetime
+# import datetime
 # import types
-import sys
-import os
+# import sys
+# import os
 import logging
-from ..external import SQLParserTools
+# from .connection_base import _raise_closed
+# from ..external import SQLParserTools
 # import dtuple
 log = logging.getLogger()
+
+
+def _raise_closed(func):
+    def _wrap(self_, *argv, **kwarg):
+        if self_._closed:
+            raise Error(
+                'The connection/cursor to the database has already closed.')
+        return func(self_, *argv, **kwarg)
+    return _wrap
 
 
 class Cursor:
@@ -72,71 +83,63 @@ class Cursor:
         the implementation of executemany()."""
         self.position = 0
 
-    def __getattr__(self, name):
-        # ~ converter = None # Use the converter methods as class methods
-        # ~ if name[:2] == 'to':
-        # ~     converter = 'SQLTo' + name[2:]
-        # ~ elif name[:5] == 'SQLTo' or name[5:] == 'ToSQL':
-        # ~     converter = name
-        # ~ if converter:
-        # ~     return self.connection._converter(converter)
-        # ~ el
-        if name == 'rowcount':
-            """This read-only attribute specifies the number of rows that
-            the last executeXXX() produced (for DQL statements like
-            'select') or affected (for DML statements like 'update' or
-            'insert').
+    @property
+    @_raise_closed
+    def rowcount(self):
+        """This read-only attribute specifies the number of rows that
+        the last executeXXX() produced (for DQL statements like
+        'select') or affected (for DML statements like 'update' or
+        'insert').
 
-            The attribute is -1 in case no executeXXX() has been
-            performed on the cursor or the rowcount of the last
-            operation is not determinable by the interface. [7]
+        The attribute is -1 in case no executeXXX() has been
+        performed on the cursor or the rowcount of the last
+        operation is not determinable by the interface. [7]
 
-            Note: Future versions of the DB API specification could
-            redefine the latter case to have the object return None
-            instead of -1."""
-            return self.info['affectedRows']
-        elif name == 'description':
-            """This read-only attribute is a sequence of 7-item
-            sequences.  Each of these sequences contains information
-            describing one result column: (name, type_code,
-            display_size, internal_size, precision, scale,
-            null_ok). The first two items (name and type_code) are
-            mandatory, the other five are optional and must be set to
-            None if meaningfull values are not provided.
+        Note: Future versions of the DB API specification could
+        redefine the latter case to have the object return None
+        instead of -1."""
+        return self.info['affectedRows']
 
-            This attribute will be None for operations that
-            do not return rows or if the cursor has not had an
-            operation invoked via the executeXXX() method yet.
+    @property
+    @_raise_closed
+    def description(self):
+        """This read-only attribute is a sequence of 7-item
+        sequences.  Each of these sequences contains information
+        describing one result column: (name, type_code,
+        display_size, internal_size, precision, scale,
+        null_ok). The first two items (name and type_code) are
+        mandatory, the other five are optional and must be set to
+        None if meaningfull values are not provided.
 
-            The type_code can be interpreted by comparing it to the
-            Type Objects specified in the section below."""
-            if self.info['results'] is None:
-                return None
-            else:
-                l = []
-                if (self.info['table'] in self.connection.tables.keys() and
-                        self.info['columns']):
-                    for column in self.info['columns']:
-                        l.append(
-                            (
-                                column,
-                                _type_codes[self.connection.tables[
-                                    self.info['table']].get(column).type],
-                                None,
-                                None,
-                                None,
-                                None,
-                                self.connection.tables[
-                                    self.info['table']].get(column).required,
-                            )
-                        )
-                    return tuple(l)
-                else:
-                    raise Bug("No table specified or no columns present.")
+        This attribute will be None for operations that
+        do not return rows or if the cursor has not had an
+        operation invoked via the executeXXX() method yet.
+
+        The type_code can be interpreted by comparing it to the
+        Type Objects specified in the section below."""
+        if self.info['results'] is None:
+            return None
         else:
-            raise AttributeError("Cursor instance has no attribute %s"
-                                 % (repr(name)))
+            describ_lst = []
+            try:
+                table = self.info['table']
+                self.info['columns'][0]
+                for column in self.info['columns']:
+                    col = self.connection.tables[table].get(column)
+                    describ_lst.append((
+                        column,
+                        col.converter.typeCode,
+                        None,
+                        None,
+                        None,
+                        None,
+                        col.required,
+                    ))
+                return tuple(describ_lst)
+            except (KeyError, IndexError):
+                Bug("No table specified or no columns present.")
 
+    @_raise_closed
     def executemany(self, operation, seq_of_parameters):
         """Prepare a database operation (query or command) and then
         execute it against all parameter sequences or mappings
@@ -157,13 +160,12 @@ class Cursor:
         to this method.
 
         Return values are not defined."""
-        if self._closed:
-            raise Error('The cursor has been closed.')
         if self.connection._closed:
             raise Error('The connection to the database has been closed.')
         for parameters in seq_of_parameters:
             self.execute(operation, parameters)
 
+    @_raise_closed
     def execute(self, operation, parameters=[]):
         """Prepare and execute a database operation (query or
         command).  Parameters may be provided as sequence or
@@ -188,13 +190,9 @@ class Cursor:
         e.g. insert multiple rows in a single operation, but this
         kind of usage is depreciated: executemany() should be used
         instead."""
-        if self._closed:
-            raise Error('The cursor has been closed.')
         if self.connection._closed:
             raise Error('The connection to the database has been closed.')
         # start web.database
-        if self.debug:
-            self.sql.append(sql)
         # end web.database
         if type(parameters) not in [type(()), type([])]:
             parameters = [parameters]
@@ -245,6 +243,7 @@ class Cursor:
                            % parsedSQL['function'].upper())
         self.position = 0
 
+    @_raise_closed
     def fetchall(self, autoConvert=True, format=None):
         """Fetch all (remaining) rows of a query result, returning
         them as a sequence of sequences (e.g. a list of tuples).
@@ -254,12 +253,11 @@ class Cursor:
         An Error (or subclass) exception is raised if the previous
         call to executeXXX() did not produce any result set or no
         call was issued yet."""
-        if self._closed:
-            raise Error('The cursor has been closed.')
         if self.connection._closed:
             raise Error('The connection to the database has been closed.')
         return self.fetchmany('all', autoConvert, format)
 
+    @_raise_closed
     def fetchone(self, autoConvert=True, format=None):
         """Fetch the next row of a query result set, returning a
         single sequence, or None when no more data is
@@ -268,8 +266,6 @@ class Cursor:
         An Error (or subclass) exception is raised if the previous
         call to executeXXX() did not produce any result set or no
         call was issued yet."""
-        if self._closed:
-            raise Error('The cursor has been closed.')
         if self.connection._closed:
             raise Error('The connection to the database has been closed.')
         if self.info['results'] is None:
@@ -282,6 +278,7 @@ class Cursor:
             else:
                 return res[0]
 
+    @_raise_closed
     def fetchmany(self, size=None, autoConvert=True, format=None):
         """Fetch the next set of rows of a query result, returning a
         sequence of sequences (e.g. a list of tuples). An empty
@@ -304,8 +301,6 @@ class Cursor:
         usually best to use the arraysize attribute.  If the size
         parameter is used, then it is best for it to retain the
         same value from one fetchmany() call to the next."""
-        if self._closed:
-            raise Error('The cursor has been closed.')
         if self.connection._closed:
             raise Error('The connection to the database has been closed.')
         if self.info['results'] is None:
@@ -362,7 +357,8 @@ class Cursor:
                 format = self.format
             if format == 'text':
                 if results is not None:
-                    return table(self.info['columns'], results, mode='sql')
+                    return table_print(self.info['columns'], results,
+                                       mode='sql')
             else:
                 rows = []
                 for row in results:
@@ -372,10 +368,11 @@ class Cursor:
                             dict[self.info['columns'][i]] = row[i]
                         rows.append(dict)
                     elif format == 'object':
-                        descr = dtuple.TupleDescriptor(
-                            [[n] for n in self.info['columns']])
-                        rows.append(
-                            dtuple.DatabaseTuple(descr, row))
+                        raise NotImplementedError('No dtuple/object')
+                        # descr = dtuple.TupleDescriptor(
+                        #     [[n] for n in self.info['columns']])
+                        # rows.append(
+                        #     dtuple.DatabaseTuple(descr, row))
                     elif format == 'tuple':
                         rows.append(tuple(row))
                     else:
@@ -385,6 +382,7 @@ class Cursor:
             # end web.database
 
     # Unused DB-API 2.0 Methods
+    @_raise_closed
     def setinputsizes(self, sizes):
         """This can be used before a call to executeXXX() to
         predefine memory areas for the operation's parameters.
@@ -402,13 +400,12 @@ class Cursor:
 
         Implementations are free to have this method do nothing
         and users are free to not use it."""
-        if self._closed:
-            raise Error('The cursor has been closed.')
         if self.connection._closed:
             raise Error('The connection to the database has been closed.')
         else:
             pass
 
+    @_raise_closed
     def setoutputsize(self, size, column=None):
         """Set a column buffer size for fetches of large columns
         (e.g. LONGs, BLOBs, etc.).  The column is specified as an
@@ -421,20 +418,17 @@ class Cursor:
 
         Implementations are free to have this method do nothing
         and users are free to not use it."""
-        if self._closed:
-            raise Error('The cursor has been closed.')
         if self.connection._closed:
             raise Error('The connection to the database has been closed.')
         else:
             pass
 
+    @_raise_closed
     def close(self):
         """Close the cursor now (rather than whenever __del__ is
         called).  The cursor will be unusable from this point
         forward; an Error (or subclass) exception will be raised
         if any operation is attempted with the cursor."""
-        if self.connection._closed:
-            raise Error('The connection to the database has been closed.')
         if self._closed:
             raise Error('The cursor has already been closed.')
         else:
@@ -479,43 +473,28 @@ class Cursor:
         if not self.connection._closed and not self._closed:
             return self.close()
 
+    @_raise_closed
     def tables(self):
-        if self._closed:
-            raise Error('The cursor has been closed.')
         if self.connection._closed:
             raise Error('The connection to the database has been closed.')
         return self.connection._tables()
 
+    @_raise_closed
     def columns(self, table):
-        if self._closed:
-            raise Error('The cursor has been closed.')
         if self.connection._closed:
             raise Error('The connection to the database has been closed.')
         return self.connection._columns(table)
 
     # web.database API
     def tableExists(self, table):
-        if table in self.tables():
-            return True
-        else:
-            return False
+        return table in self.tables()
 
     def columnExists(self, column, table):
-        if column in self.columns(table):
-            return True
-        else:
-            return False
+        return column in self.columns(table)
 
-    # def execute():
-    #   if self.debug:
-    #       self.sql.append(sql)
-
-    # def fetchall(format=None):
-    #
 #
 # SQL statement generators
 #
-
     def select(self, columns, tables, where=None, order=None, execute=None,
                format=None, distinct=False):
         # if as <> None:

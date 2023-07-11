@@ -19,12 +19,37 @@ from ..error import (Bug, ConversionError, DatabaseError, Error, SQLError,
                      SQLSyntaxError, SQLForeignKeyError, SQLKeyError)
 import sys
 import os
-from typing import Union
+from typing import Union, List
 import logging
 from ..external import SQLParserTools
-from .cursor_base import Cursor
+from .cursor_base import Cursor, _raise_closed
 # import dtuple
 log = logging.getLogger()
+
+
+def like(value, sql):
+    import re
+    sql = sql.replace(
+        '\\', '\\\\').replace('*', '\\*').replace('%', '*')
+    if sql[0] == '*':
+        if re.search(sql[1:], value):
+            return 1
+        else:
+            return 0
+    else:
+        if re.match(sql, value):
+            return 1
+        else:
+            return 0
+
+
+# def _raise_closed(func):
+#     def _wrap(self_, *argv, **kwarg):
+#         if self_._closed:
+#             raise Error(
+#                 'The connection to the database has already been closed.')
+#         return func(self_, *argv, **kwarg)
+#     return _wrap
 
 
 class BaseConnection:
@@ -73,6 +98,7 @@ class BaseConnection:
                 self.tables[table]._close()
         self._closed = True
 
+    @_raise_closed
     def commit(self):
         """
         Commit any pending transaction to the database. Note that
@@ -82,13 +108,12 @@ class BaseConnection:
         Database modules that do not support transactions should
         implement this method with void functionality.
         """
-        if self._closed:
-            raise Error('The connection to the database has been closed.')
         for table in self.tables.keys():
             if self.tables[table].open:
                 self.tables[table].commit()
         self.createdTables = []
 
+    @_raise_closed
     def rollback(self):
         """
         In case a database does provide transactions this method
@@ -97,8 +122,6 @@ class BaseConnection:
         committing the changes first will cause an implicit
         rollback to be performed.
         """
-        if self._closed:
-            raise Error('The connection to the database has been closed.')
         for table in self.tables.keys():
             if self.tables[table].open:
                 self.tables[table].rollback()
@@ -112,19 +135,17 @@ class BaseConnection:
                     os.remove(self.database + os.sep + table + end)
         self.createdTables = []
 
-    def cursor(self):
+    @_raise_closed
+    def cursor(self) -> Cursor:
         """Return a new Cursor Object using the connection.  If the
         database does not provide a direct cursor concept, the
         module will have to emulate cursors using other means to
         the extent needed by this specification.  [4]"""
-        if self._closed:
-            raise Error('The connection to the database has been closed.')
         return Cursor(self)
 
     # Type conversions
+    @_raise_closed
     def _getConverters(self, table: str, columns):
-        if self._closed:
-            raise Error('The connection to the database has been closed.')
         typeConverters = []
         sqlConverters = []
         try:
@@ -147,11 +168,10 @@ class BaseConnection:
         return sqlConverters, typeConverters
 
     # SQL helpers
+    @_raise_closed
     def createDatabase(self):
         "Create the database"
         # [table, column, type, required, unique, primaryKey, default]
-        if self._closed:
-            raise Error('The connection to the database has been closed.')
 
         if not self.databaseExists():
             # XXX Does this need to check files don't already exist?
@@ -198,10 +218,9 @@ class BaseConnection:
             raise DatabaseError("The database '%s' already exists."
                                 % (self.database))
 
+    @_raise_closed
     def _loadTableStructure(self):
         "Get the values from the ColTypes table into a suitable structure."
-        if self._closed:
-            raise Error('The connection to the database has been closed.')
         # if not self.tables.has_key(self.colTypesName):
         if self.colTypesName not in self.tables:
             self.tables[self.colTypesName] = self.driver['Table'](
@@ -257,10 +276,9 @@ class BaseConnection:
                     self.tables[column.foreignKey].childTables.append(name)
                     self.tables[name].parentTables.append(column.foreignKey)
 
+    @_raise_closed
     def _insertRowInColTypes(self, table):
         "Insert the data from Table Structure into ColTypes"
-        if self._closed:
-            raise Error('The connection to the database has been closed.')
         primaryKey = int(self._getNewKey(self.colTypesName))
         counter = 0
         for col in self.tables[table].columns:
@@ -279,9 +297,8 @@ class BaseConnection:
             )
             counter += 1
 
+    @_raise_closed
     def _checkTableFilesExist(self, tables):
-        if self._closed:
-            raise Error('The connection to the database has been closed.')
         for table_ in tables:
             # Check each of the tables listed actually exists
             for end in self.tableExtensions:
@@ -289,9 +306,8 @@ class BaseConnection:
                     raise CorruptionError("Table file '%s' not found." %
                                           (table_ + end))
 
+    @_raise_closed
     def _getColumnPositions(self, table, columns):
-        if self._closed:
-            raise Error('The connection to the database has been closed.')
         cols = []
         # if not self.tables.has_key(table):
         if table not in self.tables:
@@ -303,10 +319,9 @@ class BaseConnection:
             cols.append(self.tables[table].get(column).position)
         return cols
 
+    @_raise_closed
     def _convertValuesToInternal(self, table, columns, sqlValues=[],
                                  values=[]):
-        if self._closed:
-            raise Error('The connection to the database has been closed.')
         # ~ if values and sqlValues:
         # ~ if len(sqlValues) <> len(values):
         # ~ raise SQLError("The number of ? doesn't match the number
@@ -344,10 +359,8 @@ class BaseConnection:
                 i += 1
             return internalValues, counter
 
+    @_raise_closed
     def _convertWhereToInternal(self, table, where='', values=[]):
-        if self._closed:
-            raise Error('The connection to the database has been closed.')
-
         if where:
             columns = []
             tables = []
@@ -368,7 +381,7 @@ class BaseConnection:
                     else:
                         table, column = block[0].split('.')
                         columns.append(column)
-                        if not self.tables.has_key(table):
+                        if table not in self.tables:
                             raise SQLError(
                                 "Table %s specified in WHERE clause doesn't "
                                 "exist" % table)
@@ -432,9 +445,8 @@ class BaseConnection:
             return [], 0
 
     # Database Internal Methods
+    @_raise_closed
     def _tables(self):
-        if self._closed:
-            raise Error('The connection to the database has been closed.')
         return self.tables.keys()
 
     def _columns(self, table):
@@ -451,20 +463,16 @@ class BaseConnection:
         return tuple(cols)
 
     # Actual SQL Methods
-    def _where(self, tables, where=[]):
+    @_raise_closed
+    def _where(self, tables: Union[str, List[str]], where: list = []):
         "Where should contain None for NULLs"
-
-        if self._closed:
-            raise Error('The connection to the database has been closed.')
         if isinstance(tables, str):
             tables = [tables]
         for table in tables:
-            # if not self.tables.has_key(table):
             if table not in self.tables:
                 raise InternalError("The table '%s' doesn't exist." % table)
-            # if not self.tables.has_key(table):
-            if table not in self.tables:  # TODO: look redundent
-                self.tables[table]._load()
+            # if table not in self.tables:  # TODO: look redundent
+            #     self.tables[table]._load()
         # 1. Convert name to number in the array
         if len(where):
             columns = {}
@@ -488,19 +496,6 @@ class BaseConnection:
                     # ~     columns[t][col] = self.tables[t].get(col).position
             # 2. Build the if statemnt to look like this
             ifStatement = """
-def like(value, sql):
-    import re
-    sql = sql.replace('\\\\','\\\\\\\\').replace('*','\\\\*').replace('%%','*')
-    if sql[0] == '*':
-        if re.search(sql[1:], value):
-            return 1
-        else:
-            return 0
-    else:
-        if re.match(sql, value):
-            return 1
-        else:
-            return 0
 tables = %s
 tabs={}
 for table in tables:
@@ -580,7 +575,7 @@ found = []
             # 3. Now execute the code for each value in the database to get a
             # list of keys
             try:
-                # print(ifStatement)
+                # log.info(ifStatement)
                 exec(ifStatement)
                 # print('-----', locals())
                 # print(locals()['found'])
@@ -591,10 +586,8 @@ found = []
             return self.tables[table].file.keys()
         return locals()['found']
 
+    @_raise_closed
     def _getNewKey(self, table):
-        if self._closed:
-            raise Error('The connection to the database has been closed.')
-        # if not self.tables.has_key(table):
         if table not in self.tables:
             raise InternalError("There is no such table '%s'." % table)
         else:
@@ -627,10 +620,9 @@ found = []
                 else:
                     return str(m + 1)
 
+    @_raise_closed
     def _create(self, table, columns, values):
         columns = columns
-        if self._closed:
-            raise Error('The connection to the database has been closed.')
         # Check the table doesn't already exist
         # Add to the list of created tables in case of a rollback
         self.createdTables.append(table)
@@ -715,9 +707,8 @@ found = []
             'results':  None,
         }
 
+    @_raise_closed
     def _drop(self, tables):
-        if self._closed:
-            raise Error('The connection to the database has been closed.')
         if isinstance(tables, str):
             tables = [tables]
         for table in tables:
@@ -755,10 +746,8 @@ found = []
             'results':  None,
         }
 
+    @_raise_closed
     def _insert(self, table, columns, sqlValues=[], values=[]):
-        if self._closed:
-            raise Error('The connection to the database has been closed.')
-        # if not self.tables.has_key(table):
         if table not in self.tables:
             raise SQLError("Table '%s' not found." % (table))
         internalValues, used = self._convertValuesToInternal(table, columns,
@@ -860,9 +849,8 @@ found = []
             'results':  None,
         }
 
+    @_raise_closed
     def _update(self, table, columns, where=[], sqlValues=[], values=[]):
-        if self._closed:
-            raise Error('The connection to the database has been closed.')
         # if not self.tables.has_key(table):
         if table not in self.tables:
             raise SQLError("Table '%s' not found." % (table))
@@ -989,9 +977,8 @@ found = []
             'results':  None,
         }
 
+    @_raise_closed
     def _select(self, columns, tables, where, order, values=[]):
-        if self._closed:
-            raise Error('The connection to the database has been closed.')
         if isinstance(tables, str):
             tables = [tables]
         for table in tables:
@@ -1113,10 +1100,8 @@ found = []
                 'results': [],
             }
 
+    @_raise_closed
     def _delete(self, table, where=[], values=[]):
-        if self._closed:
-            raise Error('The connection to the database has been closed.')
-        # if not self.tables.has_key(table):
         if table not in self.tables:
             raise SQLError("Table '%s' not found." % (table))
         if not self.tables[table].open:
@@ -1126,7 +1111,6 @@ found = []
             raise SQLError('There are %s ? in the SQL but %s values have been '
                            'specified to replace them.' % (used, len(values)))
         keys = self._where(table, where)
-        # keys.append(result[0])
         # Check foreign key constraints
         # 1. Find out if this is a parent table
         if self.tables[table].childTables:
@@ -1185,9 +1169,8 @@ found = []
             'results': None,
         }
 
+    @_raise_closed
     def _showTables(self):
-        if self._closed:
-            raise Error('The connection to the database has been closed.')
         tables = self._tables()
         results = []
         for table in tables:

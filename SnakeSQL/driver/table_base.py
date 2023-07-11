@@ -270,33 +270,27 @@ class BaseDateConverter(BaseConverter):
     def storageToValue(self, column):
         if column is None:
             return None
-        else:
-            sql = str(column)
-            try:
-                return datetime.date(int(sql[0:4]), int(sql[5:7]),
-                                     int(sql[8:10]))
-            except ValueError:
-                raise ConversionError("%s is not a valid Date string." %
-                                      (repr(column)))
+        sql = str(column)
+        try:
+            return datetime.date(int(sql[0:4]), int(sql[5:7]), int(sql[8:10]))
+        except ValueError:
+            raise ConversionError("{} is not a valid Date string.".
+                                  format(repr(column)))
 
     def valueToStorage(self, column):
-        if column is None:
-            return None
-        else:
-            return column.isoformat()[:10]
+        return None if column is None else column.isoformat()[:10]
 
     def valueToSQL(self, column):
-        if column is None:
-            return 'NULL'
-        return "'" + str(self.valueToStorage(column)).replace("'", "''") + "'"
+        return None if column is None else "'{}'".format(
+            str(self.valueToStorage(column)).replace("'", "''"))
 
     def sqlToValue(self, column):
         if column == 'NULL':
             return None
         if str(column)[0] != "'" or str(column)[-1:] != "'":
             raise ConversionError(
-                "%s column value %s should start and end with a ' character."
-                % (self.type, column))
+                "{} column value {} should start and end with a ' character.".
+                format(self.type, column))
         return self.storageToValue(str(column)[1:-1].replace("''", "'"))
 
 
@@ -307,26 +301,21 @@ class BaseDatetimeConverter(BaseConverter):
     def storageToValue(self, column):
         if column is None:
             return None
-        else:
-            sql = str(column)
-            try:
-                return datetime.datetime(int(sql[0:4]), int(sql[5:7]),
-                                         int(sql[8:10]), int(sql[11:13]),
-                                         int(sql[14:16]), int(sql[17:19]))
-            except ValueError:
-                raise ConversionError("%s is not a valid DateTime string."
-                                      % (repr(column)))
+        sql = str(column)
+        try:
+            return datetime.datetime(int(sql[0:4]), int(sql[5:7]),
+                                     int(sql[8:10]), int(sql[11:13]),
+                                     int(sql[14:16]), int(sql[17:19]))
+        except ValueError:
+            raise ConversionError("%s is not a valid DateTime string."
+                                  % (repr(column)))
 
     def valueToStorage(self, column):
-        if column is None:
-            return None
-        else:
-            return column.isoformat()[:19]
+        return None if column is None else column.isoformat()[:19]
 
     def valueToSQL(self, column):
-        if column is None:
-            return 'NULL'
-        return "'" + str(self.valueToStorage(column)).replace("'", "''") + "'"
+        return 'NULL' if column is None else "'{}'".format(
+            str(self.valueToStorage(column)).replace("'", "''"))
 
     def sqlToValue(self, column):
         if column == 'NULL':
@@ -345,25 +334,20 @@ class BaseTimeConverter(BaseConverter):
     def storageToValue(self, column):
         if column is None:
             return None
-        else:
-            sql = str(column)
-            try:
-                return datetime.time(int(sql[0:2]), int(sql[3:5]),
-                                     int(sql[6:8]))
-            except ValueError:
-                raise ConversionError("%s is not a valid Time string."
-                                      % (repr(column)))
+        sql = str(column)
+        try:
+            return datetime.time(int(sql[0:2]), int(sql[3:5]),
+                                 int(sql[6:8]))
+        except ValueError:
+            raise ConversionError("%s is not a valid Time string."
+                                  % (repr(column)))
 
     def valueToStorage(self, column):
-        if column is None:
-            return None
-        else:
-            return column.isoformat()[:8]
+        return None if column is None else column.isoformat()[:8]
 
     def valueToSQL(self, column):
-        if column is None:
-            return 'NULL'
-        return "'" + str(self.valueToStorage(column)).replace("'", "''") + "'"
+        return 'NULL' if column is None else "'{}'".format(
+            str(self.valueToStorage(column)).replace("'", "''"))
 
     def sqlToValue(self, column):
         if column == 'NULL':
@@ -391,7 +375,7 @@ class BaseColumn:
         self.converter = converter
         self.position = position
 
-    def get(self, columnName):
+    def get(self, columnName):  # TODO: BUG?
         for column in self.columns:
             if column.name == columnName:
                 return column

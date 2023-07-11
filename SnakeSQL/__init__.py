@@ -74,6 +74,7 @@ __name__ = 'SnakeSQL'
 # Internal Imports
 from .external import lockdbm
 from .driver.cursor_base import Cursor
+from .driver.connection_base import BaseConnection
 from .error import DatabaseError
 import datetime
 import time
@@ -89,7 +90,8 @@ def tableDump(file: str):
     return dump
 
 
-def connect(database, driver: str = 'dbm', autoCreate: bool = False):
+def connect(database, driver: str = 'dbm', autoCreate: bool = False
+            ) -> BaseConnection:
     """Constructor for creating a connection to the database.
     Returns a Connection Object. It takes a number of
     parameters which are database dependent."""

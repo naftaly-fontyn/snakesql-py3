@@ -130,8 +130,8 @@ def updateTest(cursor: SnakeSQL.Cursor):
         # log.info("PASSED Update test.")
         pass
     else:
-        log.debug("FAILED Update test.")
-        log.debug(f'\n={results1} \n= {results2} \n= {results3}: \n {VALUES}')
+        log.info("FAILED Update test.")
+        log.info(f'\n={results1} \n= {results2} \n= {results3}: \n {VALUES}')
         raise Exception()
 
 

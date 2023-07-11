@@ -8,8 +8,8 @@
 #     False = 0
 
 # Imports
-from ..error import *
-from .StringParsers import *
+from ..error import SQLSyntaxError, SQLError
+from .StringParsers import stripBoth, stripStart
 import functools
 import string
 
@@ -104,18 +104,18 @@ class Parser:
         elif function == 'insert':
             result = self.parseInsert(sql)
         elif function == 'update':
-            result = self.parseUpdate(sql) 
+            result = self.parseUpdate(sql)
         elif function == 'create':
             result = self.parseCreate(sql)
         elif function == 'drop':
             result = self.parseDrop(sql)
         elif function == 'show':
             if stripped[1].lower() == 'tables':
-                result = {'item':'tables',}
+                result = {'item': 'tables', }
             else:
                 raise SQLSyntaxError("Expected 'TABLES' after SHOW.")
         else:
-            raise SQLError("%s is not a supported keyword."%function.upper())
+            raise SQLError(f"{function.upper()} is not a supported keyword.")
         result['function'] = function
         return result
 
@@ -126,29 +126,34 @@ class Parser:
         table = ''
         sql = stripBoth(sql)
         if sql[:len(keyword)+1].lower() != keyword.lower()+' ':
-            raise SQLSyntaxError('%s term not found at start of the %s statement.'%(keyword.upper(), keyword.upper()))
+            raise SQLSyntaxError(
+                '{} term not found at start of the {} statement.'.fromat(
+                    keyword.upper(), keyword.upper()))
         else:
             sql = stripStart(sql[len(keyword)+1:])
         if sql[:len(tableIdentifier)+1].lower() != tableIdentifier.lower()+' ':
-            raise SQLSyntaxError('%s term not found after %s keyword.'%(tableIdentifier.upper(), keyword.upper()))
+            raise SQLSyntaxError(
+                '{} term not found after {} keyword.'.format(
+                    tableIdentifier.upper(), keyword.upper()))
         else:
             sql = stripStart(sql[len(tableIdentifier)+1:])
-            
             pos = 0
             for char in sql:
-                if char in allowedCharacters+', ': 
+                if char in allowedCharacters + ', ':
                     table += char
                 else:
-                    raise SQLSyntaxError("Table name contains the invalid character '%s' after '%s'."%(char, table))
+                    raise SQLSyntaxError(
+                        "Table name contains the invalid character "
+                        "'{}' after '{}'.".format(char, table))
                 pos += 1
         t = []
         tables = table.split(',')
         for table in tables:
             t.append(table.strip(' '))
         return {
-            'tables':t,
+            'tables': t,
         }
-        
+
     def parseCreate(self, sql, types=types):
         "Parse a CREATE statement"
         sql, table = self._parseTable(sql, 'CREATE', 'TABLE')
