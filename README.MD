@@ -16,7 +16,7 @@ As the original code is GPL 2 I have to honer and cant change its so it is GPL 2
 2023-06-28: Initial port that passes the db_api2 test
 
 ## TODO
-- [ ] Write tests using the test module
+- [x] Write tests using the test module
 - [ ] Formate per PEP-8 the code
 - [ ] restyle code to be more Pythonic  “Ask forgiveness, not permission” (there are to many `if` test in the code convert to `try/except`)
 - [ ] Replace old `%` format strings withe `format` method anf `f""`
